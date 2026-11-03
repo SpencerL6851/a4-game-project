@@ -10,6 +10,7 @@ namespace MohawkGame2D
     /// </summary>
     public class Game
     {
+        public char Difficulty = 'N';
         /// <summary>
         ///     Setup runs once before the game loop begins.
         /// </summary>
