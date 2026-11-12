@@ -103,7 +103,7 @@ namespace MohawkGame2D
                                 }
                             case "Flying":
                                 {
-                                    Boss.Position = Boss.TargetPosition + new Vector2(130 * MathF.Cos(3 * Boss.AnimationPercent * MathF.Tau), 80 * MathF.Sin(4 * Boss.AnimationPercent * MathF.Tau));
+                                    Boss.Position = Boss.TargetPosition + new Vector2(300 * MathF.Sin(Boss.AnimationPercent * MathF.Tau), 100 * MathF.Sin(2 * Boss.AnimationPercent * MathF.Tau));
                                     if (Boss.ActionTimer == 0)
                                     {
                                         Boss.CurrentAction = "Idle";
@@ -290,8 +290,8 @@ namespace MohawkGame2D
                                         Boss.Invincible = false;
                                         Boss.Velocity = Vector2.Zero;
                                         Boss.Position = new Vector2(Window.Width * 0.5f, Window.Height * 0.25f);
-                                        Boss.NextAction = "Shoot Bullet Fan";
                                         Boss.CurrentAction = "Idle";
+                                        Boss.NextAction = "Charge";
                                         Boss.ActionDuration = Boss.ActionTimer = 0.5f;
                                     }
                                     break;
@@ -307,7 +307,7 @@ namespace MohawkGame2D
                                             {
                                                 Particles.Add(new Bullet(
                                                     Position: Boss.Position + Boss.Radius * _[i],
-                                                    Velocity: 8 * _[i],
+                                                    Velocity: 10f * _[i],
                                                     Acceleration: Vector2.Zero,
                                                     ColorPalette: [new(1, 0, 0), new(0)],
                                                     Radius: 7.5f,
@@ -365,7 +365,8 @@ namespace MohawkGame2D
                                     {
                                         if (Boss.AnimationPercent == 1)
                                         {
-                                            Particles.Add(new Beam(Boss, [new(1, 0, 0), new(0)], 2f, Vector2.UnitY, Boss.Radius * 1.25f, 20, 15, false));
+                                            Boss.TargetPosition = Boss.Position + Boss.Radius * Vector2.UnitY;
+                                            Particles.Add(new Beam(Boss, [new(1, 0, 0), new(0)], 2f, Boss.Radius * 1.25f, 1, 1, false));
                                             Boss.Velocity = Vector2.Zero;
                                             Boss.CurrentAction = "Zooming";
                                             Boss.ZoomStartPosition = Boss.Position;
@@ -454,7 +455,7 @@ namespace MohawkGame2D
                                     Boss.Position = Boss.TargetPosition + Random.Direction() * 3;
                                     if (Boss.ActionCounter == 0)
                                     {
-                                        Particles.Add(new Shockwave(Boss.Position, [new(1f)], 0.75f, 20f, Boss.Radius + 20, Vector2.Distance(Vector2.Zero, Window.Size) / 2, 0, 0, false, true));
+                                        Particles.Add(new Shockwave(Boss.Position, [new(1f)], 0.75f, 20f, Boss.Radius + 20, Vector2.Distance(Vector2.Zero, Window.Size) / 2, 0, 0, false, false));
                                         Boss.ActionCounter += 1;
                                     }
                                     if (Boss.AnimationPercent == 1)
@@ -463,6 +464,7 @@ namespace MohawkGame2D
                                         Boss.Invincible = false;
                                         Boss.Velocity = Vector2.Zero;
                                         Boss.Position = new Vector2(Window.Width * 0.5f, Window.Height * 0.25f);
+                                        Boss.NextAction = "Spin";
                                         Boss.CurrentAction = "Idle";
                                         Boss.ActionDuration = Boss.ActionTimer = 0.5f;
                                     }
@@ -470,18 +472,96 @@ namespace MohawkGame2D
                                 }
                             case "Charge":
                                 {
+                                    if (Boss.TargetPosition == Boss.Position)
+                                    {
+                                        Boss.TargetPosition = Player.Position;
+                                    }
+                                    Draw.LineColor = Color.Red;
+                                    if (MathF.Floor(Time.SecondsElapsed * 4) % 2 == 0)
+                                    {
+                                        Draw.LineColor = Color.White;
+                                    }
+                                    Draw.LineSize = 5;
+                                    Draw.Line(Boss.Position, Boss.TargetPosition + Vector2.Distance(Vector2.Zero, Window.Size) * Vector2.Normalize(Boss.TargetPosition - Boss.Position));
+                                    if (Boss.AnimationPercent == 1)
+                                    {
+                                        Boss.NextAction = "Beam";
+                                        Boss.CurrentAction = "Idle";
+                                        Boss.ActionTimer = Boss.ActionDuration = 1.25f;
+                                        Boss.ActionCounter = 0;
+                                    }
                                     break;
                                 }
                             case "Beam":
                                 {
+                                    if (Boss.ActionCounter == 0) 
+                                    {
+                                        Boss.ActionCounter++;
+                                        Particles.Add(new Beam(Boss, [new(1, 0, 0), new(0)], Boss.ActionDuration, Boss.Radius * 2.75f, 4, 1, false));
+                                    }
+                                    if (Boss.AnimationPercent == 1)
+                                    {
+                                        Boss.NextAction = "Flying";
+                                        Boss.CurrentAction = "Idle";
+                                        Boss.ActionTimer = Boss.ActionDuration = 5f;
+                                    }
                                     break;
                                 }
                             case "Flying":
                                 {
+                                    Boss.Position = new Vector2(Window.Width * 0.5f, Window.Height * 0.25f) + new Vector2(300 * MathF.Sin(Boss.AnimationPercent * MathF.Tau), 100 * MathF.Sin(Boss.AnimationPercent * 2 * MathF.Tau));
+                                    Boss.ActionCounter += 1;
+                                    if (Boss.ActionCounter == 25)
+                                    {
+                                        Boss.ActionCounter = 0;
+                                        Vector2[] _ = Boss.GetBulletFanVectors(Vector2.UnitY, 45, 5);
+                                        for (int i = 0; i < _.Length; i++)
+                                        {
+                                            Particles.Add(new Bullet(
+                                                Position: Boss.Position + Boss.Radius * _[i],
+                                                Velocity: 10f * _[i],
+                                                Acceleration: Vector2.Zero,
+                                                ColorPalette: [new(1, 0, 0), new(0)],
+                                                Radius: 12.5f,
+                                                Lifetime: 5,
+                                                BaseDamage: 7,
+                                                IFrames: 5,
+                                                Homing: false,
+                                                IsFriendly: false
+                                                ));
+                                        }
+                                    }
+                                    if (Boss.AnimationPercent == 1)
+                                    {
+                                        Boss.ZoomStartPosition = Boss.Position;
+                                        Boss.TargetPosition = new(Window.Width * 0.5f, Window.Height * 0.25f);
+                                        Boss.NextAction = "Summon";
+                                        Boss.CurrentAction = "Zooming";
+                                        Boss.ActionTimer = Boss.ActionDuration = 0.5f;
+                                    }
                                     break;
                                 }
                             case "Summon":
                                 {
+                                    if (Boss.ActionCounter == 1)
+                                    {    
+                                        Particles.Add(new Shockwave(Boss.Position, [new(1f)], 0.75f, 12.5f, Boss.Radius + 20, Vector2.Distance(Vector2.Zero, Window.Size) / 2, 0, 0, false, true));
+                                        Enemies.Add(new Minion(Boss.Position + new Vector2(120, 150), new Vector2(10, 20), Vector2.Zero, "Basic"));
+                                        Enemies.Add(new Minion(Boss.Position + new Vector2(-120, 150), new Vector2(-10, 20), Vector2.Zero, "Basic"));
+                                        Enemies.Add(new Minion(Boss.Position + new Vector2(80, 170), new Vector2(7.5f, 20), Vector2.Zero, "Flying"));
+                                        Enemies.Add(new Minion(Boss.Position + new Vector2(-80, 170), new Vector2(-7.5f, 20), Vector2.Zero, "Flying"));
+                                        Enemies.Add(new Minion(Boss.Position + new Vector2(0, 190), new Vector2(0, 20), Vector2.Zero, "Flying"));
+                                        Boss.ActionCounter -= 1;
+                                        Boss.Invincible = true;
+                                    }
+                                    if (Enemies.Count == 0)
+                                    {
+                                        Boss.Invincible = false;
+                                        Boss.ActionDuration = Boss.ActionTimer = 0.75f;
+                                        Boss.NextAction = "Charge";
+                                        Boss.CurrentAction = "Idle";
+                                    }
+                                    
                                     break;
                                 }
                             case "Zooming":
@@ -491,10 +571,11 @@ namespace MohawkGame2D
                                     if (Boss.AnimationPercent == 1)
                                     {
                                         Boss.CurrentAction = Boss.NextAction;
-                                        if (Boss.NextAction == "Idle")
+                                        if (Boss.NextAction == "Summon")
                                         {
-                                            Boss.NextAction = "Shoot Bullets";
-                                            Boss.ActionTimer = Boss.ActionDuration = 0.5f;
+                                            Boss.NextAction = "Charge";
+                                            Boss.ActionCounter = 1;
+                                            Boss.ActionTimer = Boss.ActionDuration = 0.75f;
                                         }
                                         else if (Boss.NextAction == "Phase Change")
                                         {
@@ -513,18 +594,30 @@ namespace MohawkGame2D
                                         {
                                             case "Charge":
                                                 {
+                                                    Boss.NextAction = "Beam";
+                                                    Boss.ActionTimer = Boss.ActionDuration = 2f;
+                                                    Boss.ActionCounter = 0;
                                                     break;
                                                 }
                                             case "Beam":
                                                 {
+                                                    Boss.NextAction = "Flying";
+                                                    Boss.ActionTimer = Boss.ActionDuration = 2f;
+                                                    Boss.ActionCounter = 0;
                                                     break;
                                                 }
                                             case "Flying":
                                                 {
+                                                    Boss.NextAction = "Summon";
+                                                    Boss.TargetPosition = Boss.Position;
+                                                    Boss.ActionTimer = Boss.ActionDuration = 5f;
+                                                    Boss.ActionCounter = 0;
                                                     break;
                                                 }
                                             case "Summon":
                                                 {
+                                                    Boss.NextAction = "Charge";
+                                                    Boss.ActionTimer = Boss.ActionDuration = 0.5f;
                                                     break;
                                                 }
                                         }
@@ -639,7 +732,7 @@ namespace MohawkGame2D
                     ColorPalette: [new(0, 0, 1), new(0.5f, 0.5f, 1)],
                     Radius: 7.5f,
                     Lifetime: 5,
-                    BaseDamage: 75,
+                    BaseDamage: 150,
                     IFrames: 3,
                     Homing: false,
                     IsFriendly: true
@@ -653,7 +746,7 @@ namespace MohawkGame2D
                     Width: 15,
                     ColorPalette: [new(0.5f, 0.5f, 1)],
                     Lifetime: 0.25f,
-                    BaseDamage: 135,
+                    BaseDamage: 300,
                     IFrames: 20
                     ));
                 Player.MeleeCooldown = 0.35f;

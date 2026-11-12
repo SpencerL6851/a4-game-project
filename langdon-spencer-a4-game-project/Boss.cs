@@ -107,7 +107,7 @@ public class Boss
         Draw.Circle(Position, Radius);
 
         // Rendering Shield
-        if (CurrentAction == "Invincible")
+        if (Invincible)
         {
             Draw.FillColor = new(0, 255, 255, 50);
             Draw.LineColor = new(0, 255, 255);

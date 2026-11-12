@@ -115,10 +115,10 @@ public abstract class Projectile(Vector2 Position, ColorF[] ColorPalette, float 
     public abstract bool IsHittingTarget(dynamic Target, float Tolerance);
 }
 
-internal class Beam(Boss Source, ColorF[] ColorPalette, float Lifetime, Vector2 Direction, float Width, int BaseDamage, int IFrames, bool IsFriendly) : Projectile(Source.Position + Source.Radius * Direction, ColorPalette, Lifetime, BaseDamage, IFrames, IsFriendly)
+internal class Beam(Boss Source, ColorF[] ColorPalette, float Lifetime, float Width, int BaseDamage, int IFrames, bool IsFriendly) : Projectile(Source.Position + Source.Radius * Vector2.Normalize(Source.TargetPosition - Source.Position), ColorPalette, Lifetime, BaseDamage, IFrames, IsFriendly)
 {
     // CONSTANTS
-    public Vector2 Direction = Direction;
+    public Vector2 Direction = Vector2.Normalize(Source.TargetPosition - Source.Position);
     public float Width = Width;
 
     // METHODS
@@ -129,11 +129,11 @@ internal class Beam(Boss Source, ColorF[] ColorPalette, float Lifetime, Vector2 
 
     public override void Update()
     {
-        Position = Source.Position + (Source.Radius + Width * 1.1f) * Direction;
+        Position = Source.Position + (Source.Radius + Width + 5) * Direction;
         Timer = MathF.Max(0, Timer - Time.DeltaTime);
         float animationPercent = Math.Clamp(1 - (Timer / Lifetime), 0, 1);
         Draw.LineColor = ColorPalette[0];
-        Draw.LineSize = Width * 0.1f;
+        Draw.LineSize = 5;
         Draw.FillColor = ColorPalette[1];
         if (animationPercent > 0f & animationPercent < 0.1f)
         {
