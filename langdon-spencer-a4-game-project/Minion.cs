@@ -11,35 +11,105 @@ public class Minion
     public Vector2 Acceleration;
     public float AttackCooldown;
     public int CurrentHealth;
+    public int IFrames;
     
     // CONSTANTS
     public int MaxHealth;
+    public ColorF[] ColorPallete = new ColorF[2];
+    public int ContactDamage;
+    public int AttackDamage;
     public float Radius;
     public string EnemyType;
     public float Friction = 0.2f;
     public float Gravity = 2f;
     public float AttackRange;
-    public Minion(Vector2 pos, Vector2 vel, Vector2 acc, int hp, float size, string type)
+    public Minion(Vector2 pos, Vector2 vel, Vector2 acc, string type)
     {
         Position = pos;
         Velocity = vel;
         Acceleration = acc;
-        CurrentHealth = MaxHealth = hp;
-        Radius = size;
         EnemyType = type;
+        switch (type)
+        {
+            case "Basic":
+                {
+                    CurrentHealth = MaxHealth = 50;
+                    ContactDamage = 15;
+                    AttackDamage = 15;
+                    Radius = 20;
+                    AttackRange = 150;
+                    ColorPallete = [new(153f / 255, 51f / 255, 51f / 255), new(73f / 255, 25f / 255, 25f / 255)];
+                    break;
+                }
+            case "Flying":
+                {
+                    CurrentHealth = MaxHealth = 30;
+                    ContactDamage = 5;
+                    AttackDamage = 20;
+                    Radius = 18;
+                    AttackRange = 400;
+                    ColorPallete = [new(153f / 255, 85f / 255, 51f / 255), new(77f / 255, 42f / 255, 25f / 255)];
+                    break;
+                }
+            default:
+                {
+                    break;
+                }
+        }
+    }
+    public void Damage(int Damage, int IFrames)
+    {
+        CurrentHealth = Math.Max(0, CurrentHealth - (int)MathF.Round(Damage * Random.Float(0.85f, 1.15f)));
+        this.IFrames = IFrames;
     }
 
     // METHODS
     public void Update()
     {
+        AttackCooldown = Math.Max(0, AttackCooldown - Time.DeltaTime);
+        IFrames = Math.Max(0, IFrames - 1);
         // Physics
         Acceleration -= Velocity * Friction;
         Velocity += Acceleration;
         Position += Velocity;
+        if (EnemyType == "Flying")
+        {
+            Acceleration = Vector2.Zero;
+        }
+        else
+        {
+            Acceleration = new Vector2(Acceleration.X, Gravity);
+        }
+        if (Velocity.Length() < 0.001f)
+        {
+            Velocity = Vector2.Zero;
+        }
+        
+        // Collision Detection
+        if (Position.Y >= Window.Height - Radius) // Bottom
+        {
+            Position.Y = Window.Height - Radius;
+            if (Velocity.Y > 0) { Velocity.Y = 0; }
+        }
+        if (Position.Y <= Radius) // Top
+        {
+            Position.Y = Radius;
+            if (Velocity.Y < 0) { Velocity.Y = 0; }
+        }
+        if (Position.X >= Window.Width - 150 - Radius) // Right
+        {
+            Position.X = Window.Width - 150 - Radius;
+            if (Velocity.X < 0) { Velocity.X = 0; }
+        }
+        if (Position.X <= 150 + Radius) // Left
+        {
+            Position.X = 150 + Radius;
+            if (Velocity.X > 0) { Velocity.X = 0; }
+        }
 
         // Rendering
-        Draw.FillColor = new("993333");
-        Draw.LineColor = new("4d1919");
+        Draw.FillColor = ColorPallete[0];
+        Draw.LineColor = ColorPallete[1];
         Draw.LineSize = 2;
         Draw.Circle(Position, Radius);
 
