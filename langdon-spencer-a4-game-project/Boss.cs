@@ -8,6 +8,7 @@ public class Boss
     // PROPERTIES
     public Vector2 Position;
     public Vector2 Velocity;
+    public Vector2 Direction = -Vector2.UnitY;
     public Vector2 TargetPosition;
     public Vector2 ZoomStartPosition;
     public bool Invincible = true;
@@ -27,17 +28,21 @@ public class Boss
     public float Radius = 45;
 
     // METHODS
-
+    /// <summary>
+    ///     Simple easing function for 'Zooming' state.
+    /// </summary>
+    /// <param name="percent">  The animation percent of the current action.</param>
+    /// <returns>   The eased animation percent of the animation.</returns>
     public float InOutSineEasing(float percent)
     {
         return (-(MathF.Cos(MathF.PI * percent) - 1)) / 2f;
     }
 
     /// <summary>
-    /// Rotates a vector by a given angle.
+    ///     Rotates a vector by a given angle.
     /// </summary>
-    /// <param name="degrees"> If true, specified angle is converted to radians before calculation</param>
-    /// <returns>The rotated vector.</returns>
+    /// <param name="degrees">   If true, specified angle is converted to radians before calculation</param>
+    /// <returns>   The rotated vector.</returns>
     public Vector2 RotateVector(Vector2 vector, float angle, bool degrees)
     {
         float newAngle = angle;
@@ -47,6 +52,13 @@ public class Boss
         }
         return new Vector2(vector.X * MathF.Cos(newAngle) - vector.Y * MathF.Sin(newAngle), vector.X * MathF.Sin(newAngle) + vector.Y * MathF.Cos(newAngle));
     }
+    /// <summary>
+    ///     Calculates the vectors for a fan of vectors, usually directions for bullets to travel.
+    /// </summary>
+    /// <param name="direction">    The direction vector for the fan.</param>
+    /// <param name="spreadDegrees">    The amount of degrees wide the fan will be.</param>
+    /// <param name="amount">   The amount of vectors to return. More vectors means less space between them.</param>
+    /// <returns>   An array of vectors spaced evenly apart from one another with the middle vector being the given direction.</returns>
     public Vector2[] GetBulletFanVectors(Vector2 direction, float spreadDegrees, int amount)
     {
         Vector2[] vectorArray = new Vector2[amount];
@@ -58,11 +70,19 @@ public class Boss
         }
         return vectorArray;
     }
+    /// <summary>
+    ///     Damages the boss and gives them invincibility frames.
+    /// </summary>
+    /// <param name="Damage">   The base damage of the attack. The actual damage dealt will be within 15% of the base damage.</param>
+    /// <param name="IFrames">  The amount of invincibility frames the attack will provide.</param>
     public void Damage(int Damage, int IFrames)
     {
         CurrentHealth = Math.Max(0, CurrentHealth - (int)MathF.Round(Damage * Random.Float(0.85f, 1.15f)));
         this.IFrames = IFrames;
     }
+    /// <summary>
+    /// Initializes the values for the boss.
+    /// </summary>
     public void Setup()
     {
         CurrentPhase = 1;
@@ -70,6 +90,9 @@ public class Boss
         ActionCounter = -1;
         Position = new Vector2(Window.Width * 0.5f, Window.Height * -0.5f);
     }
+    /// <summary>
+    /// This should be called once per frame.
+    /// </summary>
     public void Update()
     {
         IFrames = Math.Max(0, IFrames - 1);
@@ -104,14 +127,17 @@ public class Boss
         Draw.FillColor = new("993333");
         Draw.LineColor = new("4d1919");
         Draw.LineSize = 2;
+        float angle = MathF.Atan2(Direction.Y, Direction.X) * 180f / MathF.PI;
+        Draw.Quad(Position + RotateVector(new Vector2(0, -1.15f * Radius), angle + 90, true), Position + RotateVector(new Vector2(Radius * 1.15f, -Radius * 0.85f), angle + 90, true), Position + RotateVector(new Vector2(Radius * 1.05f, Radius), angle + 90, true), Position);
+        Draw.Quad(Position + RotateVector(new Vector2(0, -1.15f * Radius), angle + 90, true), Position + RotateVector(new Vector2(-Radius * 1.15f, -Radius * 0.85f), angle + 90, true), Position + RotateVector(new Vector2(-Radius * 1.05f, Radius), angle + 90, true), Position);
         Draw.Circle(Position, Radius);
 
         // Rendering Shield
         if (Invincible)
         {
-            Draw.FillColor = new(0, 255, 255, 50);
-            Draw.LineColor = new(0, 255, 255);
-            Draw.Circle(Position, Radius * 1.25f);
+            Draw.FillColor = new ColorF(0, 1, 1, 0.3f);
+            Draw.LineColor = new ColorF(0, 1, 1, 0.8f);
+            Draw.Circle(Position, Radius * 1.45f);
         }
     }
 }

@@ -11,17 +11,17 @@ public abstract class Particle(Vector2 Position, ColorF[] ColorPalette, float Li
     public float Lifetime = Lifetime;
     public float Timer = Lifetime;
     public bool Expired = false;
-    
+
     // CONSTANTS
     public readonly float SpawnTime = Time.SecondsElapsed;
 
     // METHODS
-    
+
     /// <summary>
-    /// Rotates a vector by a given angle.
+    ///     Rotates a vector by a given angle.
     /// </summary>
-    /// <param name="degrees"> If true, specified angle is converted to radians before calculation</param>
-    /// <returns>The rotated vector.</returns>
+    /// <param name="degrees">  If true, specified angle is converted to radians before calculation</param>
+    /// <returns>   The rotated vector.</returns>
     public Vector2 RotateVector(Vector2 vector, float angle, bool degrees)
     {
         float newAngle = angle;
@@ -31,24 +31,46 @@ public abstract class Particle(Vector2 Position, ColorF[] ColorPalette, float Li
         }
         return new Vector2(vector.X * MathF.Cos(newAngle) - vector.Y * MathF.Sin(newAngle), vector.X * MathF.Sin(newAngle) + vector.Y * MathF.Cos(newAngle));
     }
+    /// <summary>
+    ///     Checks whether or not two circles are overlapping.
+    /// </summary>
+    /// <param name="Circle1Position">  The position of the first circle.</param>
+    /// <param name="Circle1Radius">    The radius of the first circle.</param>
+    /// <param name="Circle2Position">  The position of the second circle.</param>
+    /// <param name="Circle2Radius">    The radius of the second circle.</param>
+    /// <param name="Tolerance">    The amount of leeway for collision detection.</param>
+    /// <returns>   'true' if the circles are overlapping, otherwise 'false'.</returns>
     public bool CircleCircleCollision(Vector2 Circle1Position, float Circle1Radius, Vector2 Circle2Position, float Circle2Radius, float Tolerance)
     {
         return Vector2.Distance(Circle1Position, Circle2Position) <= Tolerance * (Circle1Radius + Circle2Radius);
     }
-    public bool RayCircleDetection(Vector2 PointOnLine, Vector2 LineDirection, float LineThickness, Vector2 CirclePosition, float CircleRadius, float Tolerance)
+    /// <summary>
+    ///     Checks if a ray collides with a circle.
+    /// </summary>
+    /// <param name="RayOrigin">    The starting point of the ray.</param>
+    /// <param name="RayDirection"> The direction vector for the ray.</param>
+    /// <param name="RayThickness"> The thickness of the ray.</param>
+    /// <param name="CirclePosition">   The position of the circle.</param>
+    /// <param name="CircleRadius"> The radius of the circle.</param>
+    /// <param name="Tolerance">    The amount of leeway for collision detection.</param>
+    /// <returns>   'true' if the ray is touching the circle, otherwise 'false'.</returns>
+    public bool RayCircleDetection(Vector2 RayOrigin, Vector2 RayDirection, float RayThickness, Vector2 CirclePosition, float CircleRadius, float Tolerance)
     {
-        Vector2 vectorToTarget = CirclePosition - PointOnLine;
-        float scalarProjection = Vector2.Dot(vectorToTarget, LineDirection) / LineDirection.LengthSquared();
+        Vector2 vectorToTarget = CirclePosition - RayOrigin;
+        float scalarProjection = Vector2.Dot(vectorToTarget, RayDirection) / RayDirection.LengthSquared();
         if (scalarProjection < 0)
         {
-            return Vector2.Distance(PointOnLine, CirclePosition) <= Tolerance * (CircleRadius + LineThickness);
+            return Vector2.Distance(RayOrigin, CirclePosition) <= Tolerance * (CircleRadius + RayThickness);
         }
         else
         {
-            Vector2 closestPointToTarget = PointOnLine + LineDirection * scalarProjection;
-            return Vector2.Distance(closestPointToTarget, CirclePosition) <= Tolerance * (CircleRadius + LineThickness);
+            Vector2 closestPointToTarget = RayOrigin + RayDirection * scalarProjection;
+            return Vector2.Distance(closestPointToTarget, CirclePosition) <= Tolerance * (CircleRadius + RayThickness);
         }
     }
+    /// <summary>
+    ///     This should be called once per frame.
+    /// </summary>
     public abstract void Update();
 
 }
@@ -62,10 +84,19 @@ internal class Shockwave(Vector2 Position, ColorF[] ColorPalette, float Lifetime
     public float EndRadius = EndRadius;
 
     // METHODS
+    /// <summary>
+    ///     Checks if the attack is hitting the target.
+    /// </summary>
+    /// <param name="Target">   The target to check for.</param>
+    /// <param name="Tolerance">    The amount of leeway for the collsion detection.</param>
+    /// <returns>   'true' if the target is being hit by the attack, otherwise 'false'.</returns>
     public override bool IsHittingTarget(dynamic Target, float Tolerance)
     {
         return CircleCircleCollision(Position, float.Lerp(StartRadius, EndRadius, 1 - (Timer / Lifetime)), Target.Position, Target.Radius, Tolerance);
     }
+    /// <summary>
+    ///     This should be called once per frame.
+    /// </summary>
     public override void Update()
     {
         Timer = MathF.Max(0, Timer - Time.DeltaTime);
@@ -88,6 +119,9 @@ internal class Dust(Vector2 Position, Vector2 Velocity, Vector2 Acceleration, Co
     public Vector2 Velocity = Velocity;
     public Vector2 Acceleration = Acceleration;
     public float Radius = Radius;
+    /// <summary>
+    ///     This should be called once per frame.
+    /// </summary>
     public override void Update()
     {
         Timer = MathF.Max(0, Timer - Time.DeltaTime);
@@ -112,40 +146,63 @@ public abstract class Projectile(Vector2 Position, ColorF[] ColorPalette, float 
     public int Damage = BaseDamage;
     public int IFrames = IFrames;
     public bool IsFriendly = IsFriendly;
+    /// <summary>
+    ///     Checks if the attack is hitting the target.
+    /// </summary>
+    /// <param name="Target">   The target to check for.</param>
+    /// <param name="Tolerance">    The amount of leeway for the collsion detection.</param>
+    /// <returns>   'true' if the target is being hit by the attack, otherwise 'false'.</returns>
     public abstract bool IsHittingTarget(dynamic Target, float Tolerance);
 }
 
-internal class Beam(Boss Source, ColorF[] ColorPalette, float Lifetime, float Width, int BaseDamage, int IFrames, bool IsFriendly) : Projectile(Source.Position + Source.Radius * Vector2.Normalize(Source.TargetPosition - Source.Position), ColorPalette, Lifetime, BaseDamage, IFrames, IsFriendly)
+internal class Beam(Boss Source, ColorF[] ColorPalette, float Lifetime, float Width, int BaseDamage, int IFrames, bool IsFriendly, bool LockToSource) : Projectile(Source.Position + Source.Radius * Vector2.Normalize(Source.TargetPosition - Source.Position), ColorPalette, Lifetime, BaseDamage, IFrames, IsFriendly)
 {
     // CONSTANTS
+    public bool LockToSource = LockToSource;
     public Vector2 Direction = Vector2.Normalize(Source.TargetPosition - Source.Position);
     public float Width = Width;
+    public float ActualWidth = Width;
 
     // METHODS
+    /// <summary>
+    ///     Checks if the attack is hitting the target.
+    /// </summary>
+    /// <param name="Target">   The target to check for.</param>
+    /// <param name="Tolerance">    The amount of leeway for the collsion detection.</param>
+    /// <returns>   'true' if the target is being hit by the attack, otherwise 'false'.</returns>
     public override bool IsHittingTarget(dynamic Target, float Tolerance)
     {
-        return RayCircleDetection(Position, Direction, Width, Target.Position, Target.Radius, Tolerance);
+        return RayCircleDetection(Position, Direction, ActualWidth, Target.Position, Target.Radius, Tolerance);
     }
-
+    /// <summary>
+    ///     This should be called once per frame.
+    /// </summary>
     public override void Update()
     {
-        Position = Source.Position + (Source.Radius + Width + 5) * Direction;
+        if (LockToSource)
+        {
+            Position = Source.Position + (Source.Radius + Width + 5) * Direction;
+        }
         Timer = MathF.Max(0, Timer - Time.DeltaTime);
         float animationPercent = Math.Clamp(1 - (Timer / Lifetime), 0, 1);
         Draw.LineColor = ColorPalette[0];
         Draw.LineSize = 5;
         Draw.FillColor = ColorPalette[1];
-        if (animationPercent > 0f & animationPercent < 0.1f)
+        if (animationPercent != 1)
         {
-            Draw.Capsule(Position, Position + (Direction * 1500f), (Width * animationPercent * 10));
-        }
-        else if (animationPercent >= 0.1f & animationPercent < 0.9f)
-        {
-            Draw.Capsule(Position, Position + (Direction * 1500f), Width * Random.Float(0.95f, 1.05f));
-        }
-        else if (animationPercent >= 0.9f & animationPercent < 1f)
-        {
-            Draw.Capsule(Position, Position + (Direction * 1500f), (Width * (1 - animationPercent) * 10));
+            if (animationPercent > 0f & animationPercent < 0.1f)
+            {
+                ActualWidth = (Width * animationPercent * 10);
+            }
+            else if (animationPercent >= 0.1f & animationPercent < 0.9f)
+            {
+                ActualWidth = Width * Random.Float(0.95f, 1.05f);
+            }
+            else if (animationPercent >= 0.9f & animationPercent < 1f)
+            {
+                ActualWidth = (Width * (1 - animationPercent) * 10);
+            }
+            Draw.Capsule(Position, Position + (Direction * 1500f), ActualWidth);
         }
         else
         {
@@ -162,14 +219,27 @@ internal class Bullet(Vector2 Position, Vector2 Velocity, Vector2 Acceleration, 
     public Vector2 Acceleration = Acceleration;
     public Vector2 TrailEndPosition = Position;
     public bool Homing = Homing;
+    /// <summary>
+    ///     Checks if the attack is hitting the target.
+    /// </summary>
+    /// <param name="Target">   The target to check for.</param>
+    /// <param name="Tolerance">    The amount of leeway for the collsion detection.</param>
+    /// <returns>   'true' if the target is being hit by the attack, otherwise 'false'.</returns>
     public override bool IsHittingTarget(dynamic Target, float Tolerance)
     {
         return CircleCircleCollision(Position, Radius, Target.Position, Target.Radius, Tolerance);
     }
+    /// <summary>
+    ///     Curves the velocity of the bullet towards the target.
+    /// </summary>
+    /// <param name="Target">   The target to curve towards.</param>
     public void CurveToTarget(dynamic Target)
     {
         Velocity = Vector2.Normalize(((30 - 1) * Velocity + (Velocity.Length() * Vector2.Normalize(Target.Position - Position))) / 30) * Velocity.Length();
     }
+    /// <summary>
+    ///     This should be called once per frame.
+    /// </summary>
     public override void Update()
     {
         Vector2 trailEndPosition = Position - 0.25f * Radius * Velocity;
@@ -180,7 +250,7 @@ internal class Bullet(Vector2 Position, Vector2 Velocity, Vector2 Acceleration, 
         }
         Velocity += Acceleration;
         Position += Velocity;
-        
+
         Timer = MathF.Max(0, Timer - Time.DeltaTime);
         if (Timer == 0 | Position.X < 150 - Radius | Position.X > Window.Width - 150 + Radius | Position.Y < -Radius | Position.Y > Window.Height + Radius)
         {
@@ -205,16 +275,16 @@ internal class SwordSwing(Player Source, float Width, ColorF[] ColorPalette, flo
     public float ArcDegrees = 150;
 
     /// <summary>
-    /// Controls the animation of the sword swing.
+    ///     Controls the animation of the sword swing.
     /// </summary>
-    /// <param name="tValue"> The percent (ranging from 0.0f to 1.0f) of the animation.</param>
+    /// <param name="tValue">   The percent (ranging from 0.0f to 1.0f) of the animation.</param>
     public float AnimationControl(float tValue)
     {
-        const float windUpLength = 1.1f;
+        const float windUpLength = 1.3f;
         const float windUpAccel = windUpLength + 1;
         float windUp = windUpAccel * MathF.Pow(tValue, 3) - windUpLength * MathF.Pow(tValue, 2);
 
-        const float overshootLength = 1.4f;
+        const float overshootLength = 1.8f;
         const float overshootDamping = overshootLength + 1;
         float followThrough = 1 + overshootDamping * MathF.Pow(tValue - 1, 3) + overshootLength * MathF.Pow(tValue - 1, 2);
 
@@ -223,11 +293,10 @@ internal class SwordSwing(Player Source, float Width, ColorF[] ColorPalette, flo
         return (1 - transitionWeight) * windUp + transitionWeight * followThrough;
     }
     /// <summary>
-    /// Handles collision detection for the projectile.
+    ///     Handles collision detection for the projectile.
     /// </summary>
-    /// <param name="Target">The entity the projectile is checking for. Can be a Player, Minion, or Boss object.</param>
-    /// <param name="Tolerance">
-    /// An amount of leeway the projectile's detection will allow for. Values greater than 1.0f mean the projectile doesn't need to be hitting it to detect the target.</param>
+    /// <param name="Target">   The entity the projectile is checking for. Can be a Player, Minion, or Boss object.</param>
+    /// <param name="Tolerance">    An amount of leeway the projectile's detection will allow for. Values greater than 1.0f mean the projectile doesn't need to be hitting it to detect the target.</param>
     /// <returns></returns>
     public override bool IsHittingTarget(dynamic Target, float Tolerance)
     {
@@ -244,7 +313,7 @@ internal class SwordSwing(Player Source, float Width, ColorF[] ColorPalette, flo
 
         float startAngle = NormalizeAngle(MathF.Atan2(Direction.Y, Direction.X) + (ArcDegrees / 2));
         float endAngle = NormalizeAngle(MathF.Atan2(Direction.Y, Direction.X) + (ArcDegrees / 2) - ArcDegrees);
-        
+
         float swingArcSpan = NormalizeAngle(endAngle - startAngle);
         float angleToTarget = NormalizeAngle(NormalizeAngle(MathF.Atan2((Target.Position - Position).Y, (Target.Position - Position).X)) - startAngle);
         if (angleToTarget <= swingArcSpan)
@@ -253,6 +322,9 @@ internal class SwordSwing(Player Source, float Width, ColorF[] ColorPalette, flo
         }
         return RayCircleDetection(Position, RotateVector(Vector2.UnitX, startAngle, false), 0, Target.Position, Target.Radius, Tolerance) | RayCircleDetection(Position, RotateVector(Vector2.UnitX, endAngle, false), 0, Target.Position, Target.Radius, Tolerance);
     }
+    /// <summary>
+    ///     This should be called once per frame.
+    /// </summary>
     public override void Update()
     {
         Position = Source.Position + Source.Radius * Direction;
@@ -274,7 +346,7 @@ internal class SwordSwing(Player Source, float Width, ColorF[] ColorPalette, flo
             {
                 Draw.Quad(Position, Position + 0.25f * Size.Y * RotateVector(Direction, (ArcDegrees / 2) + 15 - ArcDegrees * animationPercent, true), Position + Size.Y * RotateVector(Direction, (ArcDegrees / 2) - ArcDegrees * animationPercent, true), Position + 0.25f * Size.Y * RotateVector(Direction, +(ArcDegrees / 2) - 15 - ArcDegrees * animationPercent, true));
             }
-            
+
         }
     }
 }

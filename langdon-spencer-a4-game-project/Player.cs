@@ -28,6 +28,10 @@ public class Player
     public float MaxThrust = 12f;
     public float Radius = 20f;
     // METHODS
+    /// <summary>
+    ///     Initializes values for the player.
+    /// </summary>
+    /// <param name="Difficulty">   The chosen difficulty for the bossfight.</param>
     public void Setup(char Difficulty)
     {
         this.Difficulty = Difficulty;
@@ -47,6 +51,11 @@ public class Player
         };
         Position = new Vector2(Window.Width * 0.5f, Window.Height - 2 * Radius);
     }
+    /// <summary>
+    ///     Damages the player and gives them invincibility frames. Forcefully crashes the game if the player's health reaches 0.
+    /// </summary>
+    /// <param name="Damage">   The base damage of the attack. The actual damage dealt will be within 15% of the base damage.</param>
+    /// <param name="IFrames">  The amount of invincibility frames the attack will provide.</param>
     public void Damage(int Damage, int IFrames)
     {
         CurrentHealth = Math.Max(0, CurrentHealth - (int)Math.Round(Damage * Random.Float(0.85f, 1.15f) * DamageMultiplier));
@@ -56,26 +65,29 @@ public class Player
             throw new Exception("You Died!");
         }
     }
+    /// <summary>
+    ///     This should be called once per frame.
+    /// </summary>
     public void Update()
     {
         // Input Handling
         Acceleration = new(0, Gravity);
-        if (Input.IsKeyboardKeyDown(KeyboardKey.S)) 
-        { 
-            Acceleration.Y = Gravity * 1.5f; 
+        if (Input.IsKeyboardKeyDown(KeyboardKey.S))
+        {
+            Acceleration.Y = Gravity * 1.5f;
         }
-        if (Input.IsKeyboardKeyDown(KeyboardKey.A)) 
-        { 
-            Acceleration.X -= MovementSpeed; 
+        if (Input.IsKeyboardKeyDown(KeyboardKey.A))
+        {
+            Acceleration.X -= MovementSpeed;
         }
-        if (Input.IsKeyboardKeyDown(KeyboardKey.D)) 
-        { 
-            Acceleration.X += MovementSpeed; 
+        if (Input.IsKeyboardKeyDown(KeyboardKey.D))
+        {
+            Acceleration.X += MovementSpeed;
         }
-        if (Input.IsKeyboardKeyDown(KeyboardKey.Space)) 
-        { 
+        if (Input.IsKeyboardKeyDown(KeyboardKey.Space))
+        {
             Acceleration.Y = -0.8f * Gravity;
-            Grounded = false; 
+            Grounded = false;
         }
         if (Input.IsKeyboardKeyPressed(KeyboardKey.H) & HealCooldown == 0 & CurrentHealth < MaxHealth & HealsRemaining > 0)
         {
@@ -121,7 +133,7 @@ public class Player
         }
 
         // Rendering
-        
+
         // Rendering Jetpack
         Draw.LineSize = 1;
         Draw.LineColor = new(16);

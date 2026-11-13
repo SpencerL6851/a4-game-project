@@ -12,7 +12,7 @@ public class Minion
     public float AttackCooldown;
     public int CurrentHealth;
     public int IFrames;
-    
+
     // CONSTANTS
     public int MaxHealth;
     public ColorF[] ColorPallete = new ColorF[2];
@@ -57,6 +57,11 @@ public class Minion
                 }
         }
     }
+    /// <summary>
+    ///     Damages this minion and gives them invincibility frames.
+    /// </summary>
+    /// <param name="Damage">   The base damage of the attack. The actual damage dealt will be within 15% of the base damage.</param>
+    /// <param name="IFrames">  The amount of invincibility frames the attack will provide.</param>
     public void Damage(int Damage, int IFrames)
     {
         CurrentHealth = Math.Max(0, CurrentHealth - (int)MathF.Round(Damage * Random.Float(0.85f, 1.15f)));
@@ -64,6 +69,9 @@ public class Minion
     }
 
     // METHODS
+    /// <summary>
+    ///     This should be called once per frame.
+    /// </summary>
     public void Update()
     {
         AttackCooldown = Math.Max(0, AttackCooldown - Time.DeltaTime);
@@ -84,7 +92,7 @@ public class Minion
         {
             Velocity = Vector2.Zero;
         }
-        
+
         // Collision Detection
         if (Position.Y >= Window.Height - Radius) // Bottom
         {
