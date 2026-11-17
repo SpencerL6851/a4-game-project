@@ -16,18 +16,21 @@ public class Player
     public float HealCooldown;
     public int HealsRemaining;
     public float DamageMultiplier;
-
-    // CONSTANTS
-    char Difficulty;
-    public const int MaxHealth = 300;
     public float RangedCooldown;
     public float MeleeCooldown;
+
+    // CONSTANTS
+
+    char Difficulty;
+    public const int MaxHealth = 300;
     public float MovementSpeed = 2f;
     public float Friction = 0.2f;
     public float Gravity = 2f;
     public float MaxThrust = 12f;
     public float Radius = 20f;
+
     // METHODS
+    
     /// <summary>
     ///     Initializes values for the player.
     /// </summary>
@@ -70,6 +73,7 @@ public class Player
     /// </summary>
     public void Update()
     {
+
         // Input Handling
         Acceleration = new(0, Gravity);
         if (Input.IsKeyboardKeyDown(KeyboardKey.S))
@@ -159,8 +163,8 @@ public class Player
                 Draw.LineColor = new Color("598ab3");
             }
         }
-        // Rendering Eyes
         Draw.Circle(Position, Radius);
+        // Rendering Eyes
         Draw.FillColor = new(0);
         Draw.Circle(Position + new Vector2(MathF.CopySign(Radius * 0.4f, Direction.X), Radius * -0.1f), Radius * -1 / 6f);
         Draw.Circle(Position + new Vector2(MathF.CopySign(Radius * 0.8f, Direction.X), Radius * -0.1f), Radius * -1 / 6f);

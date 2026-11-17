@@ -16,7 +16,6 @@ public abstract class Particle(Vector2 Position, ColorF[] ColorPalette, float Li
     public readonly float SpawnTime = Time.SecondsElapsed;
 
     // METHODS
-
     /// <summary>
     ///     Rotates a vector by a given angle.
     /// </summary>
@@ -74,10 +73,9 @@ public abstract class Particle(Vector2 Position, ColorF[] ColorPalette, float Li
     public abstract void Update();
 
 }
-
 internal class Shockwave(Vector2 Position, ColorF[] ColorPalette, float Lifetime, float Thickness, float StartRadius, float EndRadius, int BaseDamage, int IFrames, bool IsTangible, bool IsFriendly) : Projectile(Position, ColorPalette, Lifetime, BaseDamage, IFrames, IsFriendly)
 {
-    // CONSTANTS
+    // PROPERTIES
     public bool IsTangible = IsTangible;
     public float Thickness = Thickness;
     public float StartRadius = StartRadius;
@@ -116,9 +114,12 @@ internal class Shockwave(Vector2 Position, ColorF[] ColorPalette, float Lifetime
 }
 internal class Dust(Vector2 Position, Vector2 Velocity, Vector2 Acceleration, ColorF[] ColorPalette, float Lifetime, float Radius) : Particle(Position, ColorPalette, Lifetime)
 {
-    public Vector2 Velocity = Velocity;
-    public Vector2 Acceleration = Acceleration;
+    // PROPERTIES
+    public Vector2 Velocity = Velocity / Time.DeltaTime;
+    public Vector2 Acceleration = Acceleration / Time.DeltaTime;
     public float Radius = Radius;
+
+    // METHODS
     /// <summary>
     ///     This should be called once per frame.
     /// </summary>
@@ -126,8 +127,8 @@ internal class Dust(Vector2 Position, Vector2 Velocity, Vector2 Acceleration, Co
     {
         Timer = MathF.Max(0, Timer - Time.DeltaTime);
         float animationPercent = 1 - (Timer / Lifetime);
-        Velocity += Acceleration;
-        Position += Velocity;
+        Position += (Velocity * Time.DeltaTime) + (Acceleration * 0.5f * MathF.Pow(Time.DeltaTime, 2));
+        Velocity += Acceleration * Time.DeltaTime;
         if (animationPercent == 0)
         {
             Expired = true;
@@ -142,10 +143,12 @@ internal class Dust(Vector2 Position, Vector2 Velocity, Vector2 Acceleration, Co
 }
 public abstract class Projectile(Vector2 Position, ColorF[] ColorPalette, float Lifetime, int BaseDamage, int IFrames, bool IsFriendly) : Particle(Position, ColorPalette, Lifetime)
 {
-    // CONSTANTS
+    // PROPERTIES
     public int Damage = BaseDamage;
     public int IFrames = IFrames;
     public bool IsFriendly = IsFriendly;
+
+    // METHODS
     /// <summary>
     ///     Checks if the attack is hitting the target.
     /// </summary>
@@ -154,14 +157,31 @@ public abstract class Projectile(Vector2 Position, ColorF[] ColorPalette, float 
     /// <returns>   'true' if the target is being hit by the attack, otherwise 'false'.</returns>
     public abstract bool IsHittingTarget(dynamic Target, float Tolerance);
 }
-
-internal class Beam(Boss Source, ColorF[] ColorPalette, float Lifetime, float Width, int BaseDamage, int IFrames, bool IsFriendly, bool LockToSource) : Projectile(Source.Position + Source.Radius * Vector2.Normalize(Source.TargetPosition - Source.Position), ColorPalette, Lifetime, BaseDamage, IFrames, IsFriendly)
+internal class Beam : Projectile
 {
-    // CONSTANTS
-    public bool LockToSource = LockToSource;
-    public Vector2 Direction = Vector2.Normalize(Source.TargetPosition - Source.Position);
-    public float Width = Width;
-    public float ActualWidth = Width;
+    // PROPERTIES
+    public dynamic? Source { get; set; }
+    public bool LockToSource { get; set; }
+    public Vector2 Direction { get; set; }
+    public float Width { get; set; }
+    public float ActualWidth { get; set; }
+
+    // CONSTRUCTORS
+    public Beam(Boss Source, Vector2 Direction, bool LockToSource, ColorF[] ColorPalette, float Lifetime, float Width, int BaseDamage, int IFrames, bool IsFriendly) : base(Source.Position + Source.Radius * Vector2.Normalize(Source.TargetPosition - Source.Position), ColorPalette, Lifetime, BaseDamage, IFrames, IsFriendly)
+    {
+        this.Source = Source;
+        this.LockToSource = LockToSource;
+        this.Direction = Direction;
+        this.Width = Width;
+        ActualWidth = Width;
+    }
+    public Beam(Vector2 Position, Vector2 Direction, ColorF[] ColorPalette, float Lifetime, float Width, int BaseDamage, int IFrames, bool IsFriendly) : base(Position, ColorPalette, Lifetime, BaseDamage, IFrames, IsFriendly)
+    {
+        this.Direction = Direction;
+        this.Width = Width;
+        ActualWidth = Width;
+    }
+
 
     // METHODS
     /// <summary>
@@ -175,13 +195,46 @@ internal class Beam(Boss Source, ColorF[] ColorPalette, float Lifetime, float Wi
         return RayCircleDetection(Position, Direction, ActualWidth, Target.Position, Target.Radius, Tolerance);
     }
     /// <summary>
+    ///     Gets a random point along the border of the box where the beam intersects with it.
+    /// </summary>
+    public Vector2 GetPointAlongBorder()
+    {
+        Vector2 beamNormal = new(-Direction.Y, Direction.X);
+        Vector2 beamStartPosition = Position + beamNormal * Random.Float(-ActualWidth, ActualWidth) * 0.9f;
+
+        float tValue = float.PositiveInfinity;
+        if (Direction.X != 0)
+        {
+            if ((150 - beamStartPosition.X) / Direction.X > 0)
+            {
+                tValue = (150 - beamStartPosition.X) / Direction.X;
+            }
+            else if ((1350 - beamStartPosition.X) / Direction.X > 0)
+            {
+                tValue = (1350 - beamStartPosition.X) / Direction.X;
+            }
+        }
+        if (Direction.Y != 0)
+        {
+            if ((900 - beamStartPosition.Y) / Direction.Y > 0)
+            {
+                tValue = (900 - beamStartPosition.Y) / Direction.Y;
+            }
+            else if ((-beamStartPosition.Y) / Direction.Y > 0)
+            {
+                tValue = (-beamStartPosition.Y) / Direction.Y;
+            }
+        }
+        return beamStartPosition + Direction * tValue;
+    }
+    /// <summary>
     ///     This should be called once per frame.
     /// </summary>
     public override void Update()
     {
-        if (LockToSource)
+        if (Source != null)
         {
-            Position = Source.Position + (Source.Radius + Width + 5) * Direction;
+            if (LockToSource) { Position = Source.Position + (Source.Radius + Width + 5) * Direction; }
         }
         Timer = MathF.Max(0, Timer - Time.DeltaTime);
         float animationPercent = Math.Clamp(1 - (Timer / Lifetime), 0, 1);
@@ -190,11 +243,11 @@ internal class Beam(Boss Source, ColorF[] ColorPalette, float Lifetime, float Wi
         Draw.FillColor = ColorPalette[1];
         if (animationPercent != 1)
         {
-            if (animationPercent > 0f & animationPercent < 0.1f)
+            if (animationPercent > 0f & animationPercent < 0.05f)
             {
                 ActualWidth = (Width * animationPercent * 10);
             }
-            else if (animationPercent >= 0.1f & animationPercent < 0.9f)
+            else if (animationPercent >= 0.05f & animationPercent < 0.9f)
             {
                 ActualWidth = Width * Random.Float(0.95f, 1.05f);
             }
@@ -202,7 +255,7 @@ internal class Beam(Boss Source, ColorF[] ColorPalette, float Lifetime, float Wi
             {
                 ActualWidth = (Width * (1 - animationPercent) * 10);
             }
-            Draw.Capsule(Position, Position + (Direction * 1500f), ActualWidth);
+            Draw.Capsule(Position, Position + (Direction * Window.Width * 2), ActualWidth);
         }
         else
         {
@@ -210,15 +263,18 @@ internal class Beam(Boss Source, ColorF[] ColorPalette, float Lifetime, float Wi
         }
     }
 }
-
 internal class Bullet(Vector2 Position, Vector2 Velocity, Vector2 Acceleration, ColorF[] ColorPalette, float Radius, float Lifetime, int BaseDamage, int IFrames, bool Homing, bool IsFriendly) : Projectile(Position, ColorPalette, Lifetime, BaseDamage, IFrames, IsFriendly)
 {
+    // PROPERTIES
     public float Radius = Radius;
-    public Vector2 Velocity = Velocity;
+    public Vector2 Velocity = Velocity / Time.DeltaTime;
+    public float Inertia = Velocity.Length() * 8f;
     public Vector2 Direction = Vector2.Normalize(Velocity);
-    public Vector2 Acceleration = Acceleration;
+    public Vector2 Acceleration = Acceleration / Time.DeltaTime;
     public Vector2 TrailEndPosition = Position;
     public bool Homing = Homing;
+
+    // METHODS
     /// <summary>
     ///     Checks if the attack is hitting the target.
     /// </summary>
@@ -235,22 +291,16 @@ internal class Bullet(Vector2 Position, Vector2 Velocity, Vector2 Acceleration, 
     /// <param name="Target">   The target to curve towards.</param>
     public void CurveToTarget(dynamic Target)
     {
-        Velocity = Vector2.Normalize(((30 - 1) * Velocity + (Velocity.Length() * Vector2.Normalize(Target.Position - Position))) / 30) * Velocity.Length();
+        Velocity = Vector2.Normalize(((Inertia - 1) * Velocity + (Velocity.Length() * Vector2.Normalize(Target.Position - Position))) / Inertia) * Velocity.Length();
     }
     /// <summary>
     ///     This should be called once per frame.
     /// </summary>
     public override void Update()
     {
-        Vector2 trailEndPosition = Position - 0.25f * Radius * Velocity;
-        if (Acceleration != Vector2.Zero)
-        {
-            Acceleration = Vector2.Zero;
-            Acceleration -= Velocity;
-        }
-        Velocity += Acceleration;
-        Position += Velocity;
-
+        Vector2 trailEndPosition = Position - 0.25f * Radius * Velocity * Time.DeltaTime;
+        Position += (Velocity * Time.DeltaTime) + (0.5f * Acceleration * MathF.Pow(Time.DeltaTime, 2));
+        Velocity += Acceleration * Time.DeltaTime;
         Timer = MathF.Max(0, Timer - Time.DeltaTime);
         if (Timer == 0 | Position.X < 150 - Radius | Position.X > Window.Width - 150 + Radius | Position.Y < -Radius | Position.Y > Window.Height + Radius)
         {
@@ -266,14 +316,21 @@ internal class Bullet(Vector2 Position, Vector2 Velocity, Vector2 Acceleration, 
         }
     }
 }
-
 internal class SwordSwing(Player Source, float Width, ColorF[] ColorPalette, float Lifetime, int BaseDamage, int IFrames) : Projectile(Source.Position + Source.Radius * Source.Direction, ColorPalette, Lifetime, BaseDamage, IFrames, true)
 {
+    // PROPERTIES
+
     public Player Source = Source;
     public Vector2 Size = new(Width, Source.Radius * 8);
+    
+
+    // CONSTANTS
+
     public Vector2 Direction = Vector2.Normalize(Input.GetMousePosition() - Source.Position);
     public float ArcDegrees = 150;
+    public Vector2 ActualDirection = Vector2.Normalize(Input.GetMousePosition() - Source.Position);
 
+    // METHODS
     /// <summary>
     ///     Controls the animation of the sword swing.
     /// </summary>
@@ -336,14 +393,17 @@ internal class SwordSwing(Player Source, float Width, ColorF[] ColorPalette, flo
         }
         else
         {
+            
             Draw.FillColor = ColorPalette[0];
             Draw.LineSize = 0;
             if (Direction.X > 0)
             {
+                ActualDirection = RotateVector(Direction, -(ArcDegrees / 2) - ArcDegrees * animationPercent, true);
                 Draw.Quad(Position, Position + 0.25f * Size.Y * RotateVector(Direction, -(ArcDegrees / 2) + 15 + ArcDegrees * animationPercent, true), Position + Size.Y * RotateVector(Direction, -(ArcDegrees / 2) + ArcDegrees * animationPercent, true), Position + 0.25f * Size.Y * RotateVector(Direction, -(ArcDegrees / 2) - 15 + ArcDegrees * animationPercent, true));
             }
             else
             {
+                ActualDirection = RotateVector(Direction, (ArcDegrees / 2) - ArcDegrees * animationPercent, true);
                 Draw.Quad(Position, Position + 0.25f * Size.Y * RotateVector(Direction, (ArcDegrees / 2) + 15 - ArcDegrees * animationPercent, true), Position + Size.Y * RotateVector(Direction, (ArcDegrees / 2) - ArcDegrees * animationPercent, true), Position + 0.25f * Size.Y * RotateVector(Direction, +(ArcDegrees / 2) - 15 - ArcDegrees * animationPercent, true));
             }
 

@@ -3,6 +3,7 @@ using System.Numerics;
 
 namespace MohawkGame2D;
 
+
 public class Minion
 {
     // PROPERTIES
@@ -12,8 +13,6 @@ public class Minion
     public float AttackCooldown;
     public int CurrentHealth;
     public int IFrames;
-
-    // CONSTANTS
     public int MaxHealth;
     public ColorF[] ColorPallete = new ColorF[2];
     public int ContactDamage;
@@ -23,11 +22,15 @@ public class Minion
     public float Friction = 0.2f;
     public float Gravity = 2f;
     public float AttackRange;
-    public Minion(Vector2 pos, Vector2 vel, Vector2 acc, string type)
+    public int EnemyID; 
+
+    // CONSTRUCTOR
+    public Minion(Vector2 pos, Vector2 vel, Vector2 acc, int id, string type)
     {
         Position = pos;
         Velocity = vel;
         Acceleration = acc;
+        EnemyID = id;
         EnemyType = type;
         switch (type)
         {
@@ -51,12 +54,25 @@ public class Minion
                     ColorPallete = [new(153f / 255, 85f / 255, 51f / 255), new(77f / 255, 42f / 255, 25f / 255)];
                     break;
                 }
+            case "Orbiting":
+                {
+                    AttackCooldown = 1.25f;
+                    CurrentHealth = MaxHealth = 135;
+                    ContactDamage = 0;
+                    AttackDamage = 35;
+                    Radius = 15;
+                    AttackRange = -1;
+                    ColorPallete = [new(82f / 255, 18f / 255, 15f / 255), new(41f / 255, 9f / 255, 7f / 255)];
+                    break;
+                }
             default:
                 {
                     break;
                 }
         }
     }
+    // METHODS
+
     /// <summary>
     ///     Damages this minion and gives them invincibility frames.
     /// </summary>
@@ -68,7 +84,7 @@ public class Minion
         this.IFrames = IFrames;
     }
 
-    // METHODS
+
     /// <summary>
     ///     This should be called once per frame.
     /// </summary>
@@ -76,22 +92,31 @@ public class Minion
     {
         AttackCooldown = Math.Max(0, AttackCooldown - Time.DeltaTime);
         IFrames = Math.Max(0, IFrames - 1);
+        
         // Physics
-        Acceleration -= Velocity * Friction;
-        Velocity += Acceleration;
-        Position += Velocity;
-        if (EnemyType == "Flying")
+        if (EnemyType == "Orbiting")
         {
-            Acceleration = Vector2.Zero;
+
         }
         else
         {
-            Acceleration = new Vector2(Acceleration.X, Gravity);
+            Acceleration -= Velocity * Friction;
+            Velocity += Acceleration;
+            Position += Velocity;
+            if (EnemyType == "Flying")
+            {
+                Acceleration = Vector2.Zero;
+            }
+            else
+            {
+                Acceleration = new Vector2(Acceleration.X, Gravity);
+            }
+            if (Velocity.Length() < 0.001f)
+            {
+                Velocity = Vector2.Zero;
+            }
         }
-        if (Velocity.Length() < 0.001f)
-        {
-            Velocity = Vector2.Zero;
-        }
+        
 
         // Collision Detection
         if (Position.Y >= Window.Height - Radius) // Bottom
