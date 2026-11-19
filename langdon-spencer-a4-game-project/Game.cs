@@ -11,13 +11,25 @@ namespace MohawkGame2D
     /// </summary>
     public class Game
     {
-        private bool debug = true;
+        private readonly bool debug = true;
         private float ActionSpeedMultiplier;
         public char Difficulty = 'H';
         public List<dynamic> Particles = [];
         public List<Minion> Enemies = [];
         public Boss Boss = new();
         public Player Player = new();
+
+        // Audio
+        Sound playerDamaged = Audio.LoadSound("../../../../langdon-spencer-a4-game-project/Sound Effects/NPc_Hit_1.wav");
+        Sound playerBulletShoot = Audio.LoadSound("../../../../langdon-spencer-a4-game-project/Sound Effects/Item_39.wav");
+        Sound playerBulletImpact = Audio.LoadSound("../../../../langdon-spencer-a4-game-project/Sound Effects/NPC_Killed_3.wav");
+        Sound playerSwordSwing = Audio.LoadSound("../../../../langdon-spencer-a4-game-project/Sound Effects/Item_152.wav");
+        Sound slashWarning = Audio.LoadSound("../../../../langdon-spencer-a4-game-project/Sound Effects/Avatar Of Emptiness Warp.mp3");
+        Sound bossBulletShoot = Audio.LoadSound("../../../../langdon-spencer-a4-game-project/Sound Effects/Item_42.wav");
+        Sound beamCharge = Audio.LoadSound("../../../../langdon-spencer-a4-game-project/Sound Effects/Hyper Goner Charge.mp3");
+        Sound bossRoar = Audio.LoadSound("../../../../langdon-spencer-a4-game-project/Sound Effects/Roar.wav");
+        Sound bossDeath = Audio.LoadSound("../../../../langdon-spencer-a4-game-project/Sound Effects/NPC_Killed_23.wav");
+
 
         /// <summary>
         ///     Rotates a vector by a given angle.
@@ -43,13 +55,18 @@ namespace MohawkGame2D
             Window.SetSize(1500, 900);
             ActionSpeedMultiplier = Difficulty switch
             {
-                'E' => 0.7f,
+                'E' => 0.75f,
                 'N' => 1,
-                'H' => 1.3f,
+                'H' => 1.25f,
                 _ => 1
             };
             Boss.Setup();
             Player.Setup(Difficulty);
+            Console.Clear();
+            string CurrentDirectory = System.IO.Directory.GetCurrentDirectory();
+            Console.WriteLine(CurrentDirectory);
+
+
         }
 
         /// <summary>
@@ -75,6 +92,7 @@ namespace MohawkGame2D
                                     Boss.Position = Boss.TargetPosition + Random.Direction() * 3;
                                     if (Boss.ActionCounter == 0)
                                     {
+                                        Audio.Play(bossRoar);
                                         Particles.Add(new Shockwave(Boss.Position, [new(1f)], 0.75f, 20f, Boss.Radius + 20, Vector2.Distance(Vector2.Zero, Window.Size) / 2, 0, 0, false, true));
                                         Boss.ActionCounter++;
                                     }
@@ -96,6 +114,7 @@ namespace MohawkGame2D
                                     Boss.Direction = Vector2.Normalize(Player.Position - Boss.Position);
                                     if (Boss.AttackCooldown == 0)
                                     {
+                                        Audio.Play(bossBulletShoot);
                                         Particles.Add(new Bullet(
                                             Position: Boss.Position + Boss.Radius * Boss.Direction,
                                             Velocity: 12.5f * Boss.Direction * ActionSpeedMultiplier,
@@ -209,6 +228,7 @@ namespace MohawkGame2D
                                     }
                                     else
                                     {
+                                        if (Boss.ActionCounter == 0) { Audio.Play(bossRoar); }
                                         Window.ClearBackground(new Color(255, 0, 0, 8));
                                         Boss.Position = Boss.TargetPosition + Random.Direction() * 3;
                                         if (Boss.ActionTimer <= Boss.ActionDuration * (1 - Boss.ActionCounter / (20 * Boss.ActionDuration)))
@@ -314,6 +334,7 @@ namespace MohawkGame2D
                                     Boss.Position = Boss.TargetPosition + Random.Direction() * 3;
                                     if (Boss.ActionCounter == 0)
                                     {
+                                        Audio.Play(bossRoar);
                                         Particles.Add(new Shockwave(Boss.Position, [new(1f)], 0.75f, 20f, Boss.Radius + 20, Vector2.Distance(Vector2.Zero, Window.Size) / 2, 0, 0, false, true));
                                         Boss.ActionCounter++;
                                     }
@@ -334,9 +355,10 @@ namespace MohawkGame2D
                                     if (Boss.AttackCooldown == 0)
                                     {
                                         Boss.Direction = Vector2.Normalize(Player.Position - Boss.Position);
-                                        Vector2[] _ = Boss.GetBulletFanVectors(Boss.Direction, 120, Difficulty switch { 'E' => 7, 'N' => 10, 'H' => 12, _ => 10 });
+                                        Vector2[] _ = Boss.GetBulletFanVectors(Boss.Direction, 75, Difficulty switch { 'E' => 7, 'N' => 10, 'H' => 12, _ => 10 });
                                         for (int i = 0; i < _.Length; i++)
                                         {
+                                            Audio.Play(bossBulletShoot);
                                             Particles.Add(new Bullet(
                                                 Position: Boss.Position + Boss.Radius * _[i],
                                                 Velocity: 10f * _[i] * ActionSpeedMultiplier,
@@ -376,6 +398,7 @@ namespace MohawkGame2D
                                     {
                                         if (Boss.AnimationPercent == 1)
                                         {
+                                            Audio.Play(beamCharge);
                                             Boss.CurrentAction = "Zooming";
                                             Boss.ZoomStartPosition = Boss.Position;
                                             Boss.ActionCounter--;
@@ -395,9 +418,10 @@ namespace MohawkGame2D
                                     {
                                         if (Boss.AnimationPercent == 1)
                                         {
+                                            Audio.Stop(beamCharge);
                                             Boss.TargetPosition = Boss.Position + Boss.Radius * Vector2.UnitY;
                                             Boss.ActionTimer = Boss.ActionDuration = 2f / ActionSpeedMultiplier;
-                                            Particles.Add(new Beam(Boss, Boss.Direction, true, [new(1, 0, 0), new(0)], Boss.ActionDuration, Boss.Radius * 1.25f, 1, 1, false));
+                                            Particles.Add(new Beam(Boss, Boss.Direction, true, [new(1, 0, 0), new(0.15f, 0, 0)], Boss.ActionDuration, Boss.Radius * 1.25f, 1, 1, false));
                                             Boss.Velocity = Vector2.Zero;
                                             Boss.CurrentAction = "Zooming";
                                             Boss.ZoomStartPosition = Boss.Position;
@@ -487,6 +511,7 @@ namespace MohawkGame2D
                                     Boss.Position = Boss.TargetPosition + Random.Direction() * 3;
                                     if (Boss.ActionCounter == 0)
                                     {
+                                        Audio.Play(bossRoar);
                                         Particles.Add(new Shockwave(Boss.Position, [new(1f)], 0.75f, 20f, Boss.Radius + 20, Vector2.Distance(Vector2.Zero, Window.Size) / 2, 0, 0, false, false));
                                         Boss.ActionCounter++;
                                     }
@@ -507,6 +532,7 @@ namespace MohawkGame2D
                                 {
                                     if (Boss.ActionCounter == 0)
                                     {
+                                        Audio.Play(beamCharge);
                                         Particles.Add(new Shockwave(Boss.Position, [new(1, 0, 0)], Boss.ActionDuration, Boss.Radius / 3, Vector2.Distance(Vector2.Zero, Window.Size) / 2, 0, 0, 0, false, false));
                                         Boss.ActionCounter++;
                                     }
@@ -537,7 +563,7 @@ namespace MohawkGame2D
                                     if (Boss.ActionCounter == 0)
                                     {
                                         Boss.ActionCounter++;
-                                        Particles.Add(new Beam(Boss, Boss.Direction, true, [new(1, 0, 0), new(0)], Boss.ActionDuration, Boss.Radius * 4.25f, 4, 1, false));
+                                        Particles.Add(new Beam(Boss, Boss.Direction, true, [new(1, 0, 0), new(0.15f, 0, 0)], Boss.ActionDuration, Boss.Radius * 4.25f, 4, 1, false));
                                     }
                                     if (Boss.AnimationPercent == 1)
                                     {
@@ -557,6 +583,7 @@ namespace MohawkGame2D
                                         Vector2[] _ = Boss.GetBulletFanVectors(Vector2.UnitY, 45, Difficulty switch { 'E' => 3, 'N' => 5, 'H' => 7, _ => 5 });
                                         for (int i = 0; i < _.Length; i++)
                                         {
+                                            Audio.Play(bossBulletShoot);
                                             Particles.Add(new Bullet(
                                                 Position: Boss.Position + Boss.Radius * _[i],
                                                 Velocity: 10f * _[i] * ActionSpeedMultiplier,
@@ -645,6 +672,7 @@ namespace MohawkGame2D
                                     }
                                     if (Boss.AnimationPercent == 1)
                                     {
+                                        Audio.Stop(beamCharge);
                                         Boss.CurrentAction = Boss.NextAction;
                                         switch (Boss.NextAction)
                                         {
@@ -696,12 +724,18 @@ namespace MohawkGame2D
                                 {
                                     if (Boss.ActionCounter == 0)
                                     {
+                                        Audio.Play(bossRoar);
+                                        Audio.Play(bossDeath);
+                                        foreach (dynamic _ in Particles) { _.Expired = true; }
+                                        foreach (Minion _ in Enemies) { _.CurrentHealth = 0; }
                                         Boss.Alpha = 0;
-                                        for (int i = 0; i < 30; i++)
+                                        for (int i = 0; i < 100; i++)
                                         {
-                                            Particles.Add(new Dust(Boss.Position, Random.Direction() * Random.Float(3.5f, 12.5f), new Vector2(0, 15), [new(0.3f, 0.1f, 0.1f)], Random.Float(1, 3), Boss.Radius / 3));
+                                            Particles.Add(new Dust(Boss.Position, Random.PointInCircle() * 12.5f, new Vector2(0, Random.Float(12.5f, 17.5f)), [new(Random.Float(0.25f, 0.8f), 0, 0)], Random.Float(1, 3), Boss.Radius / Random.Float(3, 5)));
                                         }
-                                        Particles.Add(new Shockwave(Boss.Position, [new(0.6f, 0.2f, 0.2f)], 2, Boss.Radius / 2, 0, Vector2.Distance(new(), Window.Size) / 2, 0, 0, false, false));
+                                        Particles.Add(new Shockwave(Boss.Position, [new(0.6f, 0.2f, 0.2f, 0.5f)], 1, Boss.Radius, 0, Vector2.Distance(new(), Window.Size) / 2, 0, 0, false, false));
+                                        Particles.Add(new Shockwave(Boss.Position, [new(0.6f, 0.2f, 0.2f, 0.5f)], 1.5f, Boss.Radius / 1.5f, 0, Vector2.Distance(new(), Window.Size) / 2, 0, 0, false, false));
+                                        Particles.Add(new Shockwave(Boss.Position, [new(0.6f, 0.2f, 0.2f, 0.5f)], 2, Boss.Radius / 2, 0, Vector2.Distance(new(), Window.Size) / 2, 0, 0, false, false));
                                         Boss.ActionCounter++;
                                     }
                                     Boss.Direction = -Vector2.UnitY;
@@ -715,6 +749,7 @@ namespace MohawkGame2D
                                     {
                                         Vector2 randomDirection = Random.Direction();
                                         float _ = Random.Float(7.5f, 12.5f);
+                                        Audio.Play(bossBulletShoot);
                                         Particles.Add(new Bullet(
                                             Position: Boss.Position + Boss.Radius * 1.25f * randomDirection,
                                             Velocity: _ * 0.7f * randomDirection * ActionSpeedMultiplier,
@@ -739,6 +774,7 @@ namespace MohawkGame2D
                                 }
                             case "Slash":
                                 {
+                                    Audio.Stop(Audio.LoadSound("../../../../langdon-spencer-a4-game-project/Sound Effects/Asriel Beam Hold.mp3"));
                                     Boss.Invincible = true;
                                     switch (Boss.ActionCounter)
                                     {
@@ -775,16 +811,17 @@ namespace MohawkGame2D
                                             {
                                                 if (Boss.Direction == -Vector2.UnitY)
                                                 {
+                                                    Audio.Play(slashWarning);
                                                     Boss.Direction = RotateVector(Vector2.UnitX, Random.Float(-15, 15), true);
                                                 }
                                                 Boss.LockToScreen = false;
                                                 Boss.Alpha = 1;
                                                 Draw.LineColor = new ColorF(0.75f, 0, 0, 0.5f);
-                                                if (MathF.Floor(Time.SecondsElapsed * 6) % 2 == 0)
+                                                if (MathF.Floor(Time.SecondsElapsed * 12) % 2 == 0)
                                                 {
                                                     Draw.LineColor = new ColorF(0.75f, 0.5f);
                                                 }
-                                                Draw.LineSize = Boss.Radius * 2;
+                                                Draw.LineSize = Boss.Radius;
                                                 Draw.LineSharp(new Vector2(Window.Width * 0.5f, Window.Height * 0.5f) - Boss.Direction * Window.Width, new Vector2(Window.Width * 0.5f, Window.Height * 0.5f) + Boss.Direction * Window.Width);
 
                                                 if (Boss.AnimationPercent == 1)
@@ -803,7 +840,7 @@ namespace MohawkGame2D
                                                         for (int j = 0; j < Difficulty switch { 'E' => 7, 'N' => 10, 'H' => 13, _ => 10 }; j++)
                                                         {
                                                             Particles.Add(new Bullet(
-                                                                Vector2.Lerp(new Vector2(Window.Width * 0.5f, Window.Height * 0.5f) - Boss.Direction * (Window.Width * 0.5f - 150), new Vector2(Window.Width * 0.5f, Window.Height * 0.5f) + Boss.Direction * (Window.Width * 0.5f - 150), (0.5f + j) / Difficulty switch { 'E' => 7, 'N' => 10, 'H' => 13, _ => 10 }) + Boss.Radius * RotateVector(Boss.Direction, 90 * i, true),
+                                                                Vector2.Lerp(new Vector2(Window.Width * 0.5f, Window.Height * 0.5f) - Boss.Direction * (Window.Width * 0.5f - 150), new Vector2(Window.Width * 0.5f, Window.Height * 0.5f) + Boss.Direction * (Window.Width * 0.5f - 150), (0.5f + j) / Difficulty switch { 'E' => 7, 'N' => 10, 'H' => 13, _ => 10 }) + Boss.Radius / 2 * RotateVector(Boss.Direction, 90 * i, true),
                                                                 0.01f * RotateVector(Boss.Direction, 90 * i, true),
                                                                 25 * RotateVector(Boss.Direction, 90 * i, true),
                                                                 [new(1, 0, 0), new(0)],
@@ -816,7 +853,7 @@ namespace MohawkGame2D
                                                                 ));
                                                         }
                                                     }
-                                                    Particles.Add(new Beam(new Vector2(Window.Width * 0.5f, Window.Height * 0.5f) - Boss.Direction * Window.Width, Boss.Direction, [new(1, 0, 0), new(0)], Boss.ActionDuration * 0.8f, Boss.Radius, 0, 0, false));
+                                                    Particles.Add(new Beam(new Vector2(Window.Width * 0.5f, Window.Height * 0.5f) - Boss.Direction * Window.Width, Boss.Direction, [new(1, 0, 0), new(0.15f, 0, 0)], Boss.ActionDuration * 0.8f, Boss.Radius / 2, 0, 0, false));
                                                     Boss.Direction = -Vector2.UnitY;
                                                 }
 
@@ -857,10 +894,10 @@ namespace MohawkGame2D
                                 }
                             case "Charge":
                                 {
-                                    if (Boss.ActionCounter == 0)
+                                    if (!Audio.IsPlaying(beamCharge))
                                     {
+                                        Audio.Play(beamCharge);
                                         Particles.Add(new Shockwave(Boss.Position, [new(1, 0, 0)], Boss.ActionDuration, Boss.Radius / 3, Vector2.Distance(Vector2.Zero, Window.Size) / 2, 0, 0, 0, false, false));
-                                        Boss.ActionCounter++;
                                     }
                                     Vector2 randomDirection = Random.Direction();
                                     float randomLifetime = Random.Float(0.5f, MathF.Min(3, Boss.ActionTimer));
@@ -873,7 +910,7 @@ namespace MohawkGame2D
                                     {
                                         Draw.LineColor = new ColorF(0.75f, 0.5f * Boss.AnimationPercent);
                                     }
-                                    Draw.LineSize = Boss.Radius * 2f / ActionSpeedMultiplier * Boss.AnimationPercent;
+                                    Draw.LineSize = Boss.Radius * 2f * Boss.AnimationPercent;
                                     Vector2[] _ = Boss.GetBulletFanVectors(Boss.Direction, Difficulty switch { 'E' => 95, 'N' => 120, 'H' => 145, _ => 5 }, Difficulty switch { 'E' => 3, 'N' => 5, 'H' => 9, _ => 5 });
                                     for (int i = 0; i < _.Length; i++)
                                     {
@@ -896,8 +933,7 @@ namespace MohawkGame2D
                                         Vector2[] _ = Boss.GetBulletFanVectors(Boss.Direction, Difficulty switch { 'E' => 95, 'N' => 120, 'H' => 145, _ => 5 }, Difficulty switch { 'E' => 3, 'N' => 5, 'H' => 9, _ => 5 });
                                         for (int i = 0; i < _.Length; i++)
                                         {
-                                            Particles.Add(new Beam(Boss, _[i], true, [new(1, 0, 0), new(0)], Boss.ActionDuration, Boss.Radius / ActionSpeedMultiplier, 8, 1, false));
-
+                                            Particles.Add(new Beam(Boss, _[i], true, [new(1, 0, 0), new(0.15f, 0, 0)], Boss.ActionDuration, Boss.Radius, 8, 1, false));
                                         }
                                     }
                                     if (Boss.AnimationPercent == 1)
@@ -937,7 +973,7 @@ namespace MohawkGame2D
                                         {
                                             Draw.LineColor = new ColorF(0.75f, 0.5f);
                                         }
-                                        Draw.LineSize = Boss.Radius * 2f / ActionSpeedMultiplier;
+                                        Draw.LineSize = Boss.Radius * 2f;
                                         Vector2[] _ = Boss.GetBulletFanVectors(Boss.Direction, Difficulty switch { 'E' => 95, 'N' => 120, 'H' => 145, _ => 5 }, Difficulty switch { 'E' => 3, 'N' => 5, 'H' => 9, _ => 5 });
                                         for (int i = 0; i < _.Length; i++)
                                         {
@@ -946,6 +982,7 @@ namespace MohawkGame2D
                                     }
                                     if (Boss.AnimationPercent == 1)
                                     {
+                                        Audio.Stop(beamCharge);
                                         Boss.CurrentAction = Boss.NextAction;
                                         switch (Boss.NextAction)
                                         {
@@ -972,7 +1009,7 @@ namespace MohawkGame2D
                                                 {
                                                     Boss.NextAction = "Beam";
                                                     Boss.ActionTimer = Boss.ActionDuration = 2.5f / ActionSpeedMultiplier;
-                                                    Boss.ActionCounter = 1;
+                                                    Boss.ActionCounter = 0;
                                                     break;
                                                 }
                                             case "Beam":
@@ -1022,15 +1059,16 @@ namespace MohawkGame2D
             if (debug)
             {
                 damageMultiplier = 50;
-                attackSpeedMultiplier = 7.5f;
+                attackSpeedMultiplier = 4f;
                 if (Input.IsKeyboardKeyPressed(KeyboardKey.Backslash))
                 {
                     Boss.Alpha = 1;
                     Boss.CurrentHealth = (int)(Boss.MaxHealth * (1 - 0.25f * Boss.CurrentPhase));
                 }
             }
-            if (Input.IsMouseButtonDown(MouseButton.Left) & Player.RangedCooldown == 0)
+            if (Input.IsMouseButtonDown(MouseButton.Left) & Player.RangedCooldown == 0 & Boss.CurrentAction != "Defeat")
             {
+                Audio.Play(playerBulletShoot);
                 Particles.Add(new Bullet(
                     Position: Player.Position + Player.Direction * Player.Radius,
                     Velocity: 20f * Vector2.Normalize(RotateVector(Input.GetMousePosition() - Player.Position, Random.Float(-2.5f, 2.5f), true)),
@@ -1038,28 +1076,28 @@ namespace MohawkGame2D
                     ColorPalette: [new(0.25f, 0.25f, 1), new(0.5f, 0.5f, 1)],
                     Radius: 7.5f,
                     Lifetime: 5,
-                    BaseDamage: 15 * damageMultiplier,
+                    BaseDamage: 18 * damageMultiplier,
                     IFrames: 3,
                     Homing: false,
                     IsFriendly: true
                     ));
                 Player.RangedCooldown = 0.125f / attackSpeedMultiplier;
             }
-            if (Input.IsMouseButtonDown(MouseButton.Right) & Player.MeleeCooldown == 0)
+            if (Input.IsMouseButtonDown(MouseButton.Right) & Player.MeleeCooldown == 0 & Boss.CurrentAction != "Defeat")
             {
+                Audio.Play(playerSwordSwing);
                 Particles.Add(new SwordSwing(
                     Source: Player,
                     Width: 15,
-                    ColorPalette: [new(0.5f, 0.5f, 1)],
                     Lifetime: 0.25f,
-                    BaseDamage: 30 * damageMultiplier,
+                    BaseDamage: 35 * damageMultiplier,
                     IFrames: 20
                     ));
                 Player.MeleeCooldown = 0.275f;
             }
 
 
-            // Projectile Updating and Collision Detection/Resolution
+            // Projectile Collision Detection/Resolution
             for (int i = 0; i < Particles.Count; i++)
             {
                 if (Particles[i] is Projectile)
@@ -1071,55 +1109,61 @@ namespace MohawkGame2D
                             Particles.Add(new Dust(Particles[i].GetPointAlongBorder(), -Random.Float(4, 7) * Particles[i].Direction, Vector2.Zero, Particles[i].ColorPalette, 1, Particles[i].Width * 0.1f));
                         }
                     }
-                    if (Particles[i].IsFriendly)
+                    if (Particles[i].Damage > 0)
                     {
-                        if (Particles[i].IsHittingTarget(Boss, 0.95f) & Boss.IFrames == 0 & !Boss.Invincible)
+                        if (Particles[i].IsFriendly)
                         {
-                            Boss.Damage(Particles[i].Damage, Particles[i].IFrames);
-                            if (Particles[i] is Bullet)
+                            if (Particles[i].IsHittingTarget(Boss, 0.95f) & Boss.IFrames == 0 & !Boss.Invincible)
                             {
-                                int dustAmount = Random.Integer(3, 7);
-                                for (int j = 0; j < dustAmount; j++)
+                                Boss.Damage(Particles[i].Damage, Particles[i].IFrames);
+                                if (Particles[i] is Bullet)
                                 {
-                                    Particles.Add(new Dust(Particles[i].Position, -Vector2.Normalize(Particles[i].Velocity) * 4 + Random.PointInCircle() * 2, Vector2.Zero, Particles[i].ColorPalette, Random.Float(0.5f, 2), Random.Float(1, 4)));
+                                    Audio.Play(playerBulletImpact);
+                                    int dustAmount = Random.Integer(3, 7);
+                                    for (int j = 0; j < dustAmount; j++)
+                                    {
+                                        Particles.Add(new Dust(Particles[i].Position, -Vector2.Normalize(Particles[i].Velocity) * 6 + Random.PointInCircle() * 4, new Vector2(0, 20), Particles[i].ColorPalette, Random.Float(0.5f, 2), Random.Float(1, 4)));
+                                    }
+                                    Particles.Add(new Shockwave(Particles[i].Position, Particles[i].ColorPalette, 0.2f, 3, Particles[i].Radius * 0.5f, Particles[i].Radius * 1.5f, 0, 0, false, true));
+                                    Particles[i].Expired = true;
                                 }
-                                Particles.Add(new Shockwave(Particles[i].Position, Particles[i].ColorPalette, 0.2f, 3, Particles[i].Radius * 0.5f, Particles[i].Radius * 1.5f, 0, 0, false, true));
-                                Particles[i].Expired = true;
+                            }
+                            foreach (Minion enemy in Enemies)
+                            {
+                                if (Particles[i].IsHittingTarget(enemy, 0.95f) & enemy.IFrames == 0)
+                                {
+                                    Audio.Play(playerBulletImpact);
+                                    enemy.Damage(Particles[i].Damage, Particles[i].IFrames);
+                                    if (Particles[i] is Bullet)
+                                    {
+                                        int dustAmount = Random.Integer(3, 7);
+                                        for (int j = 0; j < dustAmount; j++)
+                                        {
+                                            Particles.Add(new Dust(Particles[i].Position, -Vector2.Normalize(Particles[i].Velocity) * 6 + Random.PointInCircle() * 4, new Vector2(0, 20), Particles[i].ColorPalette, Random.Float(0.5f, 2), Random.Float(1, 4)));
+                                        }
+                                        Particles.Add(new Shockwave(Particles[i].Position, Particles[i].ColorPalette, 0.2f, 3, Particles[i].Radius * 0.5f, Particles[i].Radius * 1.5f, 0, 0, false, true));
+                                        Particles[i].Expired = true;
+                                    }
+
+                                }
                             }
                         }
-                        foreach (Minion enemy in Enemies)
+                        else
                         {
-                            if (Particles[i].IsHittingTarget(enemy, 0.95f) & enemy.IFrames == 0)
+                            if (Particles[i].IsHittingTarget(Player, 0.95f) & Player.IFrames == 0)
                             {
-                                enemy.Damage(Particles[i].Damage, Particles[i].IFrames);
+                                Audio.Play(playerDamaged);
+                                Player.Damage(Particles[i].Damage, Particles[i].IFrames);
                                 if (Particles[i] is Bullet)
                                 {
                                     int dustAmount = Random.Integer(3, 7);
                                     for (int j = 0; j < dustAmount; j++)
                                     {
-                                        Particles.Add(new Dust(Particles[i].Position, -Vector2.Normalize(Particles[i].Velocity) * 4 + Random.PointInCircle() * 2, Vector2.Zero, Particles[i].ColorPalette, Random.Float(0.5f, 2), Random.Float(1, 4)));
+                                        Particles.Add(new Dust(Particles[i].Position, -Vector2.Normalize(Particles[i].Velocity) * 6 + Random.PointInCircle() * 4, new Vector2(0, 20), Particles[i].ColorPalette, Random.Float(0.5f, 2), Random.Float(1, 4)));
                                     }
                                     Particles.Add(new Shockwave(Particles[i].Position, Particles[i].ColorPalette, 0.2f, 3, Particles[i].Radius * 0.5f, Particles[i].Radius * 1.5f, 0, 0, false, true));
                                     Particles[i].Expired = true;
                                 }
-
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (Particles[i].IsHittingTarget(Player, 0.95f) & Player.IFrames == 0)
-                        {
-                            Player.Damage(Particles[i].Damage, Particles[i].IFrames);
-                            if (Particles[i] is Bullet)
-                            {
-                                int dustAmount = Random.Integer(3, 7);
-                                for (int j = 0; j < dustAmount; j++)
-                                {
-                                    Particles.Add(new Dust(Particles[i].Position, -Vector2.Normalize(Particles[i].Velocity) * 4 + Random.PointInCircle() * 2, Vector2.Zero, Particles[i].ColorPalette, Random.Float(0.5f, 2), Random.Float(1, 4)));
-                                }
-                                Particles.Add(new Shockwave(Particles[i].Position, Particles[i].ColorPalette, 0.2f, 3, Particles[i].Radius * 0.5f, Particles[i].Radius * 1.5f, 0, 0, false, true));
-                                Particles[i].Expired = true;
                             }
                         }
                     }
@@ -1128,7 +1172,6 @@ namespace MohawkGame2D
 
             Boss.Update();
             Player.Update();
-
             for (int i = 0; i < Particles.Count; i++)
             {
                 if (Particles[i] is Bullet)
@@ -1139,8 +1182,8 @@ namespace MohawkGame2D
                     }
                 }
                 Particles[i].Update();
-                if (Particles[i].Expired) { Particles.RemoveAt(i); }
             }
+            Particles.RemoveAll(p => p.Expired);
 
             if (Vector2.Distance(Player.Position, Boss.Position) <= Player.Radius + Boss.Radius & Player.IFrames == 0 & !Boss.Invincible)
             {
@@ -1150,7 +1193,15 @@ namespace MohawkGame2D
             // Enemy Updating and Collision Detection/Resolution
             for (int i = 0; i < Enemies.Count; i++)
             {
-                if (Enemies[i].CurrentHealth == 0) { Enemies.Remove(Enemies[i]); }
+                if (Enemies[i].CurrentHealth == 0)
+                {
+                    int dustToAdd = Random.Integer(4, 8);
+                    for (int j = 0; j < dustToAdd; j++)
+                    {
+                        Particles.Add(new Dust(Enemies[i].Position, RotateVector(-Vector2.UnitY, Random.Float(-30, 30), true) * Random.Float(2.5f, 4.5f), new Vector2(0, Random.Float(5.5f, 7.5f)), Enemies[i].ColorPallete, Random.Float(1, 3), Enemies[i].Radius / Random.Float(3.5f, 5f)));
+                    }
+                    Enemies.Remove(Enemies[i]);
+                }
             }
             foreach (Minion enemy in Enemies)
             {
@@ -1203,7 +1254,7 @@ namespace MohawkGame2D
                                     5,
                                     true,
                                     false));
-                                enemy.AttackCooldown = 1.25f;
+                                enemy.AttackCooldown = 1.25f / ActionSpeedMultiplier;
                             }
                             break;
                         }
@@ -1233,12 +1284,13 @@ namespace MohawkGame2D
             }
 
 
-            // Rendering Borders and Health Bars
+            // Borders
             Draw.FillColor = Color.Black;
             Draw.LineSize = 0;
             Draw.Rectangle(0, 0, 150, Window.Height);
             Draw.Rectangle(Window.Width - 150, 0, 150, Window.Height);
 
+            // Player Health Bar
             Draw.FillColor = Draw.LineColor = Color.DarkGray;
             Draw.LineSize = 2;
             Draw.Rectangle(30, 400, 50, 480);
@@ -1246,7 +1298,39 @@ namespace MohawkGame2D
             Draw.LineSize = 0;
             Draw.Rectangle(new(32, 402 + 476 * (1 - (float)Player.CurrentHealth / Player.MaxHealth)), new(46, 476 * (float)Player.CurrentHealth / Player.MaxHealth));
 
-            // Rendering Boss Health Text
+
+            // Player Flight Timer Bar
+            Draw.FillColor = Draw.LineColor = Color.DarkGray;
+            Draw.LineSize = 2;
+            Draw.Rectangle(100, 600, 20, 150);
+            Draw.FillColor = new ColorF(0.25f, 0.7f, 1);
+            Draw.LineSize = 0;
+            Draw.Rectangle(new(102, 602 + 146 * (1 - Player.FlightTimer / 0.5f)), new(16, 146 * Player.FlightTimer / 0.5f));
+
+            // Player Heal Cooldown Timer
+            Draw.LineColor = Draw.FillColor = Color.DarkGray;
+            Draw.LineSize = 2;
+            Draw.Circle(new Vector2(110, 840), 20);
+            Text.Color = new(0, 196, 0);
+            Draw.FillColor = new(24, 128, 24);
+
+            switch (Difficulty)
+            {
+                case 'E':
+                    {
+                        Draw.Arc(110, 840, 40, 40, 270, 270 + 360 * (Player.HealCooldown / 45));
+                        Text.Draw("∞", new Vector2(100, 830));
+                        break;
+                    }
+                case 'N' or 'H':
+                    {
+                        if (Player.HealsRemaining != 0) { Draw.Arc(110, 840, 40, 40, 270, 270 + 360 * (Player.HealCooldown / 60)); }
+                        Text.Draw($"{Player.HealsRemaining}", new Vector2(105, 830));
+                        break;
+                    }
+            }
+
+            // Boss Health Bar and Text
             Text.Size = 20;
             Text.Color = Color.Red;
             float textOffset;
@@ -1265,30 +1349,6 @@ namespace MohawkGame2D
             Draw.FillColor = new ColorF(1, 0, 0);
             Draw.LineSize = 0;
             Draw.Rectangle(new(1377, 102 + 696 * (1 - (float)Boss.CurrentHealth / Boss.MaxHealth)), new(96, 696 * (float)Boss.CurrentHealth / Boss.MaxHealth));
-
-            // Rendering Heal Cooldown Timer
-            Draw.LineColor = Draw.FillColor = Color.DarkGray;
-            Draw.LineSize = 2;
-            Draw.Circle(new Vector2(110, 840), 20);
-            Text.Color = new(0, 196, 0);
-            Draw.FillColor = new(24, 128, 24);
-
-            switch (Difficulty)
-            {
-                case 'E':
-                    {
-                        Draw.Arc(110, 840, 40, 40, 270, 270 + 360 * (Player.HealCooldown / 45));
-                        Text.Draw("∞", new Vector2(100, 830));
-                        break;
-                    }
-                case 'N' or 'H':
-                    {
-                        Draw.Arc(110, 840, 40, 40, 270, 270 + 360 * (Player.HealCooldown / 60));
-                        Text.Draw($"{Player.HealsRemaining}", new Vector2(105, 830));
-                        break;
-                    }
-            }
-
         }
     }
 }

@@ -18,6 +18,7 @@ public class Player
     public float DamageMultiplier;
     public float RangedCooldown;
     public float MeleeCooldown;
+    public float FlightTimer = 0.5f;
 
     // CONSTANTS
 
@@ -29,8 +30,10 @@ public class Player
     public float MaxThrust = 12f;
     public float Radius = 20f;
 
+    Sound HealSFX = Audio.LoadSound("../../../../langdon-spencer-a4-game-project/Sound Effects/NPC_Killed_30.wav");
+
     // METHODS
-    
+
     /// <summary>
     ///     Initializes values for the player.
     /// </summary>
@@ -82,19 +85,36 @@ public class Player
         }
         if (Input.IsKeyboardKeyDown(KeyboardKey.A))
         {
-            Acceleration.X -= MovementSpeed;
+            if (Input.IsKeyboardKeyDown(KeyboardKey.LeftShift))
+            {
+                Acceleration.X -= 0.5f * MovementSpeed;
+            }
+            else
+            {
+                Acceleration.X -= MovementSpeed;
+            }
+            
         }
         if (Input.IsKeyboardKeyDown(KeyboardKey.D))
         {
-            Acceleration.X += MovementSpeed;
+            if (Input.IsKeyboardKeyDown(KeyboardKey.LeftShift))
+            {
+                Acceleration.X += 0.5f * MovementSpeed;
+            }
+            else
+            {
+                Acceleration.X += MovementSpeed;
+            }
         }
-        if (Input.IsKeyboardKeyDown(KeyboardKey.Space))
+        if (Input.IsKeyboardKeyDown(KeyboardKey.Space) & FlightTimer > 0)
         {
             Acceleration.Y = -0.8f * Gravity;
+            FlightTimer = Math.Max(0, FlightTimer - Time.DeltaTime);
             Grounded = false;
         }
         if (Input.IsKeyboardKeyPressed(KeyboardKey.H) & HealCooldown == 0 & CurrentHealth < MaxHealth & HealsRemaining > 0)
         {
+            Audio.Play(HealSFX);
             CurrentHealth = Math.Min(MaxHealth, CurrentHealth + 100);
             HealsRemaining -= 1;
             if (Difficulty == 'E') { HealCooldown = 45; }
@@ -117,6 +137,7 @@ public class Player
         if (Position.Y >= Window.Height - Radius) // Bottom
         {
             Grounded = true;
+            FlightTimer = 0.5f;
             Position.Y = Window.Height - Radius;
             if (Velocity.Y > 0) { Velocity.Y = 0; }
         }

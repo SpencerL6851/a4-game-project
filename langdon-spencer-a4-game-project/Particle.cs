@@ -73,45 +73,7 @@ public abstract class Particle(Vector2 Position, ColorF[] ColorPalette, float Li
     public abstract void Update();
 
 }
-internal class Shockwave(Vector2 Position, ColorF[] ColorPalette, float Lifetime, float Thickness, float StartRadius, float EndRadius, int BaseDamage, int IFrames, bool IsTangible, bool IsFriendly) : Projectile(Position, ColorPalette, Lifetime, BaseDamage, IFrames, IsFriendly)
-{
-    // PROPERTIES
-    public bool IsTangible = IsTangible;
-    public float Thickness = Thickness;
-    public float StartRadius = StartRadius;
-    public float EndRadius = EndRadius;
 
-    // METHODS
-    /// <summary>
-    ///     Checks if the attack is hitting the target.
-    /// </summary>
-    /// <param name="Target">   The target to check for.</param>
-    /// <param name="Tolerance">    The amount of leeway for the collsion detection.</param>
-    /// <returns>   'true' if the target is being hit by the attack, otherwise 'false'.</returns>
-    public override bool IsHittingTarget(dynamic Target, float Tolerance)
-    {
-        return CircleCircleCollision(Position, float.Lerp(StartRadius, EndRadius, 1 - (Timer / Lifetime)), Target.Position, Target.Radius, Tolerance);
-    }
-    /// <summary>
-    ///     This should be called once per frame.
-    /// </summary>
-    public override void Update()
-    {
-        Timer = MathF.Max(0, Timer - Time.DeltaTime);
-        float animationPercent = 1 - (Timer / Lifetime);
-        Draw.LineColor = new ColorF(ColorPalette[0].R, ColorPalette[0].G, ColorPalette[0].B, (1 - animationPercent));
-        Draw.LineSize = Thickness;
-        Draw.FillColor = Color.Clear;
-        if (animationPercent == 1)
-        {
-            Expired = true;
-        }
-        else
-        {
-            Draw.Circle(Position, StartRadius * (1 - animationPercent) + EndRadius * animationPercent);
-        }
-    }
-}
 internal class Dust(Vector2 Position, Vector2 Velocity, Vector2 Acceleration, ColorF[] ColorPalette, float Lifetime, float Radius) : Particle(Position, ColorPalette, Lifetime)
 {
     // PROPERTIES
@@ -157,6 +119,45 @@ public abstract class Projectile(Vector2 Position, ColorF[] ColorPalette, float 
     /// <returns>   'true' if the target is being hit by the attack, otherwise 'false'.</returns>
     public abstract bool IsHittingTarget(dynamic Target, float Tolerance);
 }
+internal class Shockwave(Vector2 Position, ColorF[] ColorPalette, float Lifetime, float Thickness, float StartRadius, float EndRadius, int BaseDamage, int IFrames, bool IsTangible, bool IsFriendly) : Projectile(Position, ColorPalette, Lifetime, BaseDamage, IFrames, IsFriendly)
+{
+    // PROPERTIES
+    public bool IsTangible = IsTangible;
+    public float Thickness = Thickness;
+    public float StartRadius = StartRadius;
+    public float EndRadius = EndRadius;
+
+    // METHODS
+    /// <summary>
+    ///     Checks if the attack is hitting the target.
+    /// </summary>
+    /// <param name="Target">   The target to check for.</param>
+    /// <param name="Tolerance">    The amount of leeway for the collsion detection.</param>
+    /// <returns>   'true' if the target is being hit by the attack, otherwise 'false'.</returns>
+    public override bool IsHittingTarget(dynamic Target, float Tolerance)
+    {
+        return CircleCircleCollision(Position, float.Lerp(StartRadius, EndRadius, 1 - (Timer / Lifetime)), Target.Position, Target.Radius, Tolerance);
+    }
+    /// <summary>
+    ///     This should be called once per frame.
+    /// </summary>
+    public override void Update()
+    {
+        Timer = MathF.Max(0, Timer - Time.DeltaTime);
+        float animationPercent = 1 - (Timer / Lifetime);
+        Draw.LineColor = new ColorF(ColorPalette[0].R, ColorPalette[0].G, ColorPalette[0].B, ColorPalette[0].A * (1 - animationPercent));
+        Draw.LineSize = Thickness;
+        Draw.FillColor = Color.Clear;
+        if (animationPercent == 1)
+        {
+            Expired = true;
+        }
+        else
+        {
+            Draw.Circle(Position, StartRadius * (1 - animationPercent) + EndRadius * animationPercent);
+        }
+    }
+}
 internal class Beam : Projectile
 {
     // PROPERTIES
@@ -180,6 +181,7 @@ internal class Beam : Projectile
         this.Direction = Direction;
         this.Width = Width;
         ActualWidth = Width;
+        
     }
 
 
@@ -232,6 +234,8 @@ internal class Beam : Projectile
     /// </summary>
     public override void Update()
     {
+        Sound beamShoot = Audio.LoadSound("../../../../langdon-spencer-a4-game-project/Sound Effects/Undertale_-_Blast.mp3");
+        Sound beamSustain = Audio.LoadSound("../../../../langdon-spencer-a4-game-project/Sound Effects/Asriel Beam Hold.mp3");
         if (Source != null)
         {
             if (LockToSource) { Position = Source.Position + (Source.Radius + Width + 5) * Direction; }
@@ -245,15 +249,19 @@ internal class Beam : Projectile
         {
             if (animationPercent > 0f & animationPercent < 0.05f)
             {
+                if (!Audio.IsPlaying(beamShoot)) { Audio.Play(beamShoot); }
+                if (!Audio.IsPlaying(beamSustain)) { Audio.Play(beamSustain); }
                 ActualWidth = (Width * animationPercent * 10);
             }
             else if (animationPercent >= 0.05f & animationPercent < 0.9f)
             {
                 ActualWidth = Width * Random.Float(0.95f, 1.05f);
+                if (!Audio.IsPlaying(beamSustain)) { Audio.Play(beamSustain); }
             }
             else if (animationPercent >= 0.9f & animationPercent < 1f)
             {
                 ActualWidth = (Width * (1 - animationPercent) * 10);
+                Audio.Stop(beamSustain);
             }
             Draw.Capsule(Position, Position + (Direction * Window.Width * 2), ActualWidth);
         }
@@ -316,13 +324,12 @@ internal class Bullet(Vector2 Position, Vector2 Velocity, Vector2 Acceleration, 
         }
     }
 }
-internal class SwordSwing(Player Source, float Width, ColorF[] ColorPalette, float Lifetime, int BaseDamage, int IFrames) : Projectile(Source.Position + Source.Radius * Source.Direction, ColorPalette, Lifetime, BaseDamage, IFrames, true)
+internal class SwordSwing(Player Source, float Width, float Lifetime, int BaseDamage, int IFrames) : Projectile(Source.Position + Source.Radius * Source.Direction, [], Lifetime, BaseDamage, IFrames, true)
 {
     // PROPERTIES
 
     public Player Source = Source;
     public Vector2 Size = new(Width, Source.Radius * 8);
-    
 
     // CONSTANTS
 
@@ -393,9 +400,9 @@ internal class SwordSwing(Player Source, float Width, ColorF[] ColorPalette, flo
         }
         else
         {
-            
-            Draw.FillColor = ColorPalette[0];
-            Draw.LineSize = 0;
+            Draw.FillColor = new Color("44aaff");
+            Draw.LineColor = new Color("3078b3");
+            Draw.LineSize = 2;
             if (Direction.X > 0)
             {
                 ActualDirection = RotateVector(Direction, -(ArcDegrees / 2) - ArcDegrees * animationPercent, true);
