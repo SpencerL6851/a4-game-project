@@ -209,22 +209,22 @@ internal class Beam : Projectile
         {
             if ((150 - beamStartPosition.X) / Direction.X > 0)
             {
-                tValue = (150 - beamStartPosition.X) / Direction.X;
+                tValue = Math.Min(tValue, (150 - beamStartPosition.X) / Direction.X);
             }
             else if ((1350 - beamStartPosition.X) / Direction.X > 0)
             {
-                tValue = (1350 - beamStartPosition.X) / Direction.X;
+                tValue = Math.Min(tValue, (1350 - beamStartPosition.X) / Direction.X);
             }
         }
         if (Direction.Y != 0)
         {
             if ((900 - beamStartPosition.Y) / Direction.Y > 0)
             {
-                tValue = (900 - beamStartPosition.Y) / Direction.Y;
+                tValue = Math.Min(tValue, (900 - beamStartPosition.Y) / Direction.Y);
             }
             else if ((-beamStartPosition.Y) / Direction.Y > 0)
             {
-                tValue = (-beamStartPosition.Y) / Direction.Y;
+                tValue = Math.Min(tValue, (-beamStartPosition.Y) / Direction.Y);
             }
         }
         return beamStartPosition + Direction * tValue;
